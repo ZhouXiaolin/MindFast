@@ -1,4 +1,4 @@
-import { Store } from "@mariozechner/pi-web-ui";
+import { Store } from "./storage";
 
 export interface EnabledModels {
   modelIds: string[];

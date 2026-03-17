@@ -1,18 +1,20 @@
-import { useEffect, useRef, useState } from "react";
-import { createChatPanel, getAppStorage, initPi } from "../pi/initPi";
-import type { ChatPanel } from "@mariozechner/pi-web-ui";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { initPi, getAppStorage } from "../pi/initPi";
+import { setApiKeyPromptHandler } from "../pi/apiKeyPrompt";
 import { NoModelConfigured } from "../components/NoModelConfigured";
+import { ChatUI } from "../components/ChatUI";
+import { ApiKeyPromptDialog } from "../components/ApiKeyPromptDialog";
 
 export function ChatView() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [error, setError] = useState<string | null>(null);
   const [hasConfig, setHasConfig] = useState<boolean | null>(null);
-  const panelRef = useRef<ChatPanel | null>(null);
+  const [apiKeyDialog, setApiKeyDialog] = useState<{ open: boolean; provider: string }>({
+    open: false,
+    provider: "",
+  });
+  const apiKeyResolveRef = useRef<((saved: boolean) => void) | null>(null);
 
-  // Check if user has configured any models
   useEffect(() => {
     let cancelled = false;
-
     const checkModelConfig = async () => {
       try {
         await initPi();
@@ -21,13 +23,8 @@ export function ChatView() {
           if (!cancelled) setHasConfig(false);
           return;
         }
-
-        // Get enabled providers
         const enabledProviderIds = await storage.enabledProviders.getAll();
-
-        // Check if any enabled providers have enabled models
         let hasAnyEnabledModel = false;
-
         for (const providerId of enabledProviderIds) {
           const enabledModels = await storage.enabledModels.get(providerId);
           if (enabledModels && enabledModels.modelIds.length > 0) {
@@ -35,51 +32,34 @@ export function ChatView() {
             break;
           }
         }
-
-        if (!cancelled) {
-          setHasConfig(hasAnyEnabledModel);
-        }
+        if (!cancelled) setHasConfig(hasAnyEnabledModel);
       } catch (err) {
         console.error("Failed to check model config:", err);
         if (!cancelled) setHasConfig(false);
       }
     };
-
     checkModelConfig();
-
     return () => {
       cancelled = true;
     };
   }, []);
 
-  // Initialize chat panel when we have config
   useEffect(() => {
-    if (hasConfig !== true) return;
-
-    let mounted = true;
-    const el = containerRef.current;
-    if (!el) return;
-
-    createChatPanel()
-      .then((chatPanel) => {
-        if (!mounted || !containerRef.current) return;
-        panelRef.current = chatPanel;
-        el.appendChild(chatPanel);
-      })
-      .catch((err) => {
-        if (mounted) {
-          setError(err instanceof Error ? err.message : String(err));
-        }
+    const handler = (provider: string) => {
+      return new Promise<boolean>((resolve) => {
+        apiKeyResolveRef.current = resolve;
+        setApiKeyDialog({ open: true, provider });
       });
-
-    return () => {
-      mounted = false;
-      if (panelRef.current && el.contains(panelRef.current)) {
-        el.removeChild(panelRef.current);
-        panelRef.current = null;
-      }
     };
-  }, [hasConfig]);
+    setApiKeyPromptHandler(handler);
+    return () => setApiKeyPromptHandler(null);
+  }, []);
+
+  const handleApiKeyDialogResolve = useCallback((saved: boolean) => {
+    apiKeyResolveRef.current?.(saved);
+    apiKeyResolveRef.current = null;
+    setApiKeyDialog((prev) => ({ ...prev, open: false }));
+  }, []);
 
   if (hasConfig === null) {
     return (
@@ -93,19 +73,17 @@ export function ChatView() {
     return <NoModelConfigured />;
   }
 
-  if (error) {
-    return (
-      <div className="flex h-full items-center justify-center p-6 text-sidebar-muted">
-        {error}
-      </div>
-    );
-  }
-
   return (
-    <div
-      ref={containerRef}
-      className="flex h-full w-full flex-col"
-      style={{ minHeight: 0 }}
-    />
+    <>
+      <div className="flex h-full w-full flex-col" style={{ minHeight: 0 }}>
+        <ChatUI />
+      </div>
+      <ApiKeyPromptDialog
+        provider={apiKeyDialog.provider}
+        open={apiKeyDialog.open}
+        onOpenChange={(open) => !open && handleApiKeyDialogResolve(false)}
+        onResolve={handleApiKeyDialogResolve}
+      />
+    </>
   );
 }

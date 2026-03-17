@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { initPi, getAppStorage } from "../pi/initPi";
-import type { CustomProvider, AutoDiscoveryProviderType } from "@mariozechner/pi-web-ui";
+import type { CustomProvider, AutoDiscoveryProviderType } from "../pi/storage";
 import { getModels } from "@mariozechner/pi-ai";
 import {
   COMMON_PROVIDERS,

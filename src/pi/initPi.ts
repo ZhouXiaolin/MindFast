@@ -3,27 +3,29 @@ import { getModel } from "@mariozechner/pi-ai";
 import type { Model } from "@mariozechner/pi-ai";
 import {
   AppStorage,
-  ChatPanel,
   IndexedDBStorageBackend,
   ProviderKeysStore,
   SessionsStore,
   SettingsStore,
   CustomProvidersStore,
   setAppStorage,
-  getAppStorage as piGetAppStorage,
-  defaultConvertToLlm,
-  ApiKeyPromptDialog,
-} from "@mariozechner/pi-web-ui";
+} from "./storage";
+import { defaultConvertToLlm } from "./convertToLlm";
+import { getApiKeyPromptHandler } from "./apiKeyPrompt";
 import { EnabledProvidersStore, ModelsStore, EnabledModelsStore } from "./stores";
 import { isKnownProvider } from "../config/commonProviderModels";
 import { getCustomProviderModels } from "../config/commonProviderModels";
+import "./artifacts/types";
+import { ArtifactsStore } from "./artifacts/store";
+import { createArtifactsTool } from "./artifacts/tool";
 
 const DB_NAME = "mindfast-pi";
 const DB_VERSION = 2;
 
 let storage: ExtendedAppStorage | null = null;
 let agent: Agent | null = null;
-let initPromise: Promise<{ storage: ExtendedAppStorage; agent: Agent }> | null = null;
+let artifactsStore: ArtifactsStore | null = null;
+let initPromise: Promise<{ storage: ExtendedAppStorage; agent: Agent; artifactsStore: ArtifactsStore }> | null = null;
 
 export interface ExtendedAppStorage extends AppStorage {
   enabledProviders: EnabledProvidersStore;
@@ -63,9 +65,6 @@ function createCustomModel(providerId: string, modelId: string, modelName: strin
   const baseUrl = PROVIDER_BASE_URLS[providerId] || "";
   const modelConfig = PROVIDER_MODEL_CONFIGS[providerId]?.[modelId] || { reasoning: false, contextWindow: 128000 };
 
-  // Get a base model to copy structure from
-  const baseModel = getModel("openai", "gpt-4o-mini");
-
   return {
     id: modelId,
     name: modelName,
@@ -80,9 +79,13 @@ function createCustomModel(providerId: string, modelId: string, modelName: strin
   };
 }
 
-export async function initPi(): Promise<{ storage: ExtendedAppStorage; agent: Agent }> {
-  if (storage && agent) {
-    return { storage, agent };
+export async function initPi(): Promise<{
+  storage: ExtendedAppStorage;
+  agent: Agent;
+  artifactsStore: ArtifactsStore;
+}> {
+  if (storage && agent && artifactsStore) {
+    return { storage, agent, artifactsStore };
   }
   if (initPromise) {
     return initPromise;
@@ -138,7 +141,7 @@ export async function initPi(): Promise<{ storage: ExtendedAppStorage; agent: Ag
     storage = extendedStorage;
 
     // Try to get the first enabled model from user configuration
-    let defaultModel = getModel("openai", "gpt-4o-mini"); // fallback
+    let defaultModel: Model<any> = getModel("openai", "gpt-4o-mini"); // fallback
 
     try {
       const enabledProviderIds = await enabledProviders.getAll();
@@ -171,34 +174,44 @@ export async function initPi(): Promise<{ storage: ExtendedAppStorage; agent: Ag
       console.warn("Failed to load user's default model, using fallback:", e);
     }
 
+    const store = new ArtifactsStore();
+    artifactsStore = store;
+    const artifactsTool = createArtifactsTool(store, () => agent);
+
     agent = new Agent({
       initialState: {
         systemPrompt: "You are a helpful assistant.",
         model: defaultModel,
         thinkingLevel: "off",
         messages: [],
-        tools: [],
+        tools: [artifactsTool],
       },
       convertToLlm: defaultConvertToLlm,
       getApiKey: async (provider: string) => {
-        const s = getAppStorage();
-        const key = s ? await s.providerKeys.get(provider) : undefined;
+        const s = storage;
+        let key = s ? await s.providerKeys.get(provider) : null;
+        if (!key && getApiKeyPromptHandler()) {
+          const ok = await getApiKeyPromptHandler()!(provider);
+          if (ok && s) key = await s.providerKeys.get(provider);
+        }
         return key ?? undefined;
       },
     });
 
-    return { storage: extendedStorage, agent };
+    return { storage: extendedStorage, agent, artifactsStore: store };
   })();
 
   return initPromise;
+}
+
+export function getArtifactsStore(): ArtifactsStore | null {
+  return artifactsStore;
 }
 
 export function getAppStorage(): ExtendedAppStorage | null {
   return storage;
 }
 
-// Export the original getAppStorage for compatibility
-export { piGetAppStorage };
 
 /**
  * Get all enabled models from storage
@@ -381,24 +394,6 @@ export function createCustomModelSelector(
   return dialog;
 }
 
-export async function createChatPanel(): Promise<ChatPanel> {
-  const { agent: a } = await initPi();
-  const chatPanel = new ChatPanel();
-
-  await chatPanel.setAgent(a!, {
-    onApiKeyRequired: (provider) => ApiKeyPromptDialog.prompt(provider),
-    onModelSelect: () => {
-      // Get current model from agent
-      const currentModel = a?.state?.model;
-      if (!currentModel) return;
-
-      // Show custom model selector with user's configured models
-      const dialog = createCustomModelSelector(currentModel, (model) => {
-        a?.setModel(model);
-      });
-      document.body.appendChild(dialog);
-    },
-  });
-
-  return chatPanel;
+export function getAgent(): Agent | null {
+  return agent;
 }
