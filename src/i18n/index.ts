@@ -130,6 +130,11 @@ const resources = {
       chatFontDyslexic: "Dyslexic friendly",
       settingsVoice: "Voice settings",
       settingsVoiceLabel: "Voice",
+      noModelConfigured: "No models configured",
+      noModelConfiguredDesc: "To start chatting, you need to configure at least one AI provider and model.",
+      goToProviderSettings: "Go to Provider Settings",
+      configureProvider: "Configure Provider",
+      currentModel: "Model",
     },
   },
   zh: {
@@ -256,6 +261,11 @@ const resources = {
       chatFontDyslexic: "阅读障碍友好",
       settingsVoice: "语音设置",
       settingsVoiceLabel: "语音",
+      noModelConfigured: "未配置模型",
+      noModelConfiguredDesc: "要开始对话，请至少配置一个 AI 提供商和模型。",
+      goToProviderSettings: "前往提供商设置",
+      configureProvider: "配置提供商",
+      currentModel: "模型",
     },
   },
 };
