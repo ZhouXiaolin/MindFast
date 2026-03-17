@@ -1,10 +1,12 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { SlidersHorizontal, Server, Palette } from "lucide-react";
 import { cn } from "../lib/cn";
 
 const SETTINGS_LINKS = [
-  { path: "general", labelKey: "settingsGeneral" },
-  { path: "provider", labelKey: "settingsProvider" },
+  { path: "general", labelKey: "settingsGeneral", icon: SlidersHorizontal },
+  { path: "theme-presets", labelKey: "settingsThemePresets", icon: Palette },
+  { path: "provider", labelKey: "settingsProvider", icon: Server },
 ] as const;
 
 export function SettingsLayout() {
@@ -22,20 +24,21 @@ export function SettingsLayout() {
           className="flex w-52 shrink-0 flex-col gap-0.5 border-r border-sidebar px-4 py-6"
           aria-label={t("settings")}
         >
-          {SETTINGS_LINKS.map(({ path, labelKey }) => (
+          {SETTINGS_LINKS.map(({ path, labelKey, icon: Icon }) => (
             <NavLink
               key={path}
               to={`/settings/${path}`}
-              end={path === "general"}
+              end={path === "general" || path === "theme-presets"}
               className={({ isActive }) =>
                 cn(
-                  "rounded-lg px-3 py-2 text-sm transition-colors",
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                   isActive
                     ? "bg-white/10 font-medium"
                     : "hover:bg-white/5"
                 )
               }
             >
+              <Icon className="h-4 w-4 shrink-0" />
               {t(labelKey)}
             </NavLink>
           ))}

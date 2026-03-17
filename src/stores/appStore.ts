@@ -2,12 +2,15 @@ import { create } from "zustand";
 
 export type Lang = "en" | "zh";
 export type ColorMode = "light" | "auto" | "dark";
+export type ChatFont = "default" | "sans" | "system" | "dyslexic";
 
 interface AppState {
   lang: Lang;
   setLang: (lang: Lang) => void;
   colorMode: ColorMode;
   setColorMode: (mode: ColorMode) => void;
+  chatFont: ChatFont;
+  setChatFont: (font: ChatFont) => void;
   sidebarOpen: boolean;
   toggleSidebar: () => void;
   userName: string;
@@ -23,6 +26,8 @@ export const useAppStore = create<AppState>((set) => ({
   setLang: (lang) => set({ lang }),
   colorMode: "dark",
   setColorMode: (colorMode) => set({ colorMode }),
+  chatFont: "default",
+  setChatFont: (chatFont) => set({ chatFont }),
   sidebarOpen: true,
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   userName: "Solaren",

@@ -37,6 +37,11 @@
     color: var(--sidebar-fg);
     -webkit-font-smoothing: antialiased;
   }
+  /* Chat font options */
+  .font-chat-default { font-family: inherit; }
+  .font-chat-sans { font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; }
+  .font-chat-system { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .font-chat-dyslexic { font-family: "Comic Sans MS", "Chalkboard SE", "Comic Neue", sans-serif; }
 }
 
 /* Global theme utilities — 全站字色统一用 sidebar-fg / sidebar-muted */

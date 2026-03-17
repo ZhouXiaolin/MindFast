@@ -17,8 +17,16 @@ interface ChatUIProps {
   sessionId: string;
 }
 
+const CHAT_FONT_CLASS: Record<import("../stores/appStore").ChatFont, string> = {
+  default: "font-chat-default",
+  sans: "font-chat-sans",
+  system: "font-chat-system",
+  dyslexic: "font-chat-dyslexic",
+};
+
 export function ChatUI({ sessionId }: ChatUIProps) {
   const touchWorkspaceRevision = useAppStore((state) => state.touchWorkspaceRevision);
+  const chatFont = useAppStore((state) => state.chatFont);
   const [agent, setAgent] = useState<Agent | null>(null);
   const [currentModel, setCurrentModel] = useState<Model<any> | null>(null);
   const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel>("off");
@@ -253,7 +261,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     <div className="relative flex h-full flex-1 min-w-0">
       {/* Chat column */}
       <div
-        className="flex h-full flex-col flex-1 min-w-0"
+        className={cn("flex h-full flex-col flex-1 min-w-0", CHAT_FONT_CLASS[chatFont])}
         style={{ minHeight: 0 }}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-sidebar-soft px-4 py-3">

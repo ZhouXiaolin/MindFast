@@ -16,12 +16,15 @@ import {
   Code,
   PanelLeftClose,
   PanelLeft,
+  Palette,
+  Settings,
 } from "lucide-react";
+import type { ColorMode } from "../stores/appStore";
 
 export function Layout() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { setLang, sidebarOpen, toggleSidebar, userName, userEmail } = useAppStore();
+  const { setLang, sidebarOpen, toggleSidebar, userName, userEmail, colorMode, setColorMode } = useAppStore();
   const { sessions } = useSessionMetadataList();
   const [recentsOpen, setRecentsOpen] = useState(true);
   const recentSessions = sessions.slice(0, 8);
@@ -169,132 +172,61 @@ export function Layout() {
             )}
           </div>
         
-          {/* Bottom: User */}
-          <div className="shrink-0 border-t border-sidebar p-2">
+          {/* Bottom: Theme + Settings (stacked) */}
+          <div className="shrink-0 flex flex-col gap-0.5 border-t border-sidebar p-2">
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
                 <button
                   type="button"
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-sidebar-muted hover:bg-sidebar-hover",
+                    "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar",
                     !sidebarOpen && "justify-center px-0"
                   )}
-                  aria-haspopup="menu"
-                  aria-label={`${userName}, ${t("userSettings")}`}
+                  aria-haspopup="listbox"
+                  aria-label={t("theme")}
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sidebar-hover text-xs font-medium text-sidebar">
-                    {userName.slice(0, 2).toUpperCase()}
-                  </span>
+                  <Palette className="h-5 w-5 shrink-0" />
                   {sidebarOpen && (
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium text-sidebar">{userName}</div>
-                      <div className="truncate text-xs text-sidebar-muted">{t("freePlan")}</div>
-                    </div>
+                    <span className="min-w-0 flex-1 truncate">
+                      {t(colorMode === "light" ? "colorModeLight" : colorMode === "dark" ? "colorModeDark" : "colorModeAuto")}
+                    </span>
                   )}
                 </button>
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>
                 <DropdownMenu.Content
-                  className="min-w-[220px] rounded-lg border border-sidebar bg-sidebar py-1.5 shadow-xl text-sidebar z-50"
+                  className="min-w-40 rounded-lg border border-sidebar bg-sidebar py-1.5 shadow-xl text-sidebar z-50"
                   sideOffset={6}
                   side="left"
                   align="end"
                 >
-                  <div className="px-3 py-2 text-sm text-sidebar-muted">
-                    {userEmail}
-                  </div>
-                  <DropdownMenu.Item
-                    className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
-                    onSelect={() => navigate("/settings/general")}
-                  >
-                    <span className="flex w-full justify-between">
-                      <span>{t("userSettings")}</span>
-                      <span className="text-xs text-sidebar-muted">{t("settingsShortcut")}</span>
-                    </span>
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Sub>
-                    <DropdownMenu.SubTrigger className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover data-[state=open]:bg-sidebar-hover">
-                      {t("lang")}
-                    </DropdownMenu.SubTrigger>
-                    <DropdownMenu.Portal>
-                      <DropdownMenu.SubContent
-                        className="min-w-40 rounded-lg border border-sidebar bg-sidebar p-1 shadow-lg"
-                        sideOffset={4}
-                      >
-                        <DropdownMenu.Item
-                          className="cursor-pointer rounded px-2 py-1.5 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
-                          onSelect={() => setLang("en")}
-                        >
-                          English
-                        </DropdownMenu.Item>
-                        <DropdownMenu.Item
-                          className="cursor-pointer rounded px-2 py-1.5 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
-                          onSelect={() => setLang("zh")}
-                        >
-                          中文
-                        </DropdownMenu.Item>
-                      </DropdownMenu.SubContent>
-                    </DropdownMenu.Portal>
-                  </DropdownMenu.Sub>
-                  <DropdownMenu.Item
-                    className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
-                    onSelect={() => {}}
-                  >
-                    {t("getHelp")}
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Separator className="my-1 h-px bg-sidebar-border" />
-                  <DropdownMenu.Item
-                    className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
-                    onSelect={() => {}}
-                  >
-                    {t("upgradePlan")}
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item
-                    className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
-                    onSelect={() => {}}
-                  >
-                    {t("getApps")}
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item
-                    className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
-                    onSelect={() => {}}
-                  >
-                    {t("giftClaude")}
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Sub>
-                    <DropdownMenu.SubTrigger className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover data-[state=open]:bg-sidebar-hover">
-                      {t("learnMore")}
-                    </DropdownMenu.SubTrigger>
-                    <DropdownMenu.Portal>
-                      <DropdownMenu.SubContent
-                        className="min-w-40 rounded-lg border border-sidebar bg-sidebar p-1 shadow-lg"
-                        sideOffset={4}
-                      >
-                        <DropdownMenu.Item
-                          className="cursor-pointer rounded px-2 py-1.5 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
-                          onSelect={() => {}}
-                        >
-                          Docs
-                        </DropdownMenu.Item>
-                        <DropdownMenu.Item
-                          className="cursor-pointer rounded px-2 py-1.5 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
-                          onSelect={() => {}}
-                        >
-                          Blog
-                        </DropdownMenu.Item>
-                      </DropdownMenu.SubContent>
-                    </DropdownMenu.Portal>
-                  </DropdownMenu.Sub>
-                  <DropdownMenu.Separator className="my-1 h-px bg-sidebar-border" />
-                  <DropdownMenu.Item
-                    className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
-                    onSelect={() => {}}
-                  >
-                    {t("logOut")}
-                  </DropdownMenu.Item>
+                  {(["light", "auto", "dark"] as ColorMode[]).map((mode) => (
+                    <DropdownMenu.Item
+                      key={mode}
+                      className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
+                      onSelect={() => setColorMode(mode)}
+                    >
+                      <span className={cn(colorMode === mode && "font-medium")}>
+                        {t(mode === "light" ? "colorModeLight" : mode === "dark" ? "colorModeDark" : "colorModeAuto")}
+                      </span>
+                    </DropdownMenu.Item>
+                  ))}
                 </DropdownMenu.Content>
               </DropdownMenu.Portal>
             </DropdownMenu.Root>
+            <NavLink
+              to="/settings/general"
+              className={({ isActive }) =>
+                cn(
+                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
+                  !sidebarOpen && "justify-center px-0",
+                  isActive ? "bg-sidebar-hover text-sidebar" : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
+                )
+              }
+            >
+              <Settings className="h-5 w-5 shrink-0" />
+              {sidebarOpen && <span className="min-w-0 flex-1 truncate">{t("settings")}</span>}
+            </NavLink>
           </div>
         </div>
       </aside>
