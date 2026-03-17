@@ -70,7 +70,7 @@ export function ApiKeyPromptDialog({
               value={key}
               onChange={(e) => setKey(e.target.value)}
               placeholder="API key"
-              className="w-full rounded-lg border border-sidebar bg-transparent px-3 py-2 text-sidebar placeholder-sidebar-muted focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full rounded-lg border border-sidebar bg-transparent px-3 py-2 text-sidebar placeholder-sidebar-muted focus:outline-none focus:ring-1 ring-accent"
               autoComplete="off"
             />
           </div>
@@ -86,7 +86,7 @@ export function ApiKeyPromptDialog({
               type="button"
               onClick={handleSave}
               disabled={!key.trim() || checking}
-              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600 disabled:opacity-50"
+              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:opacity-90 disabled:opacity-50"
             >
               Save
             </button>

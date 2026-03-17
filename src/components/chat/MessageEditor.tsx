@@ -61,7 +61,7 @@ export function MessageEditor({
       onSubmit={handleSubmit}
       className={cn(
         "rounded-xl border border-sidebar bg-sidebar shadow-sm",
-        "focus-within:ring-1 focus-within:ring-emerald-500/50"
+        "focus-within:ring-1 focus-within:ring-accent"
       )}
     >
       <textarea

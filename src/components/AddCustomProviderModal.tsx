@@ -49,7 +49,7 @@ export function AddCustomProviderModal({
 
   const labelClass = "block text-sm font-medium text-sidebar mb-1.5";
   const inputClass =
-    "w-full rounded-lg border border-sidebar bg-transparent px-3 py-2 text-sidebar placeholder-sidebar-muted focus:outline-none focus:ring-1 focus:ring-[var(--sidebar-border)]";
+    "w-full rounded-lg border border-sidebar bg-transparent px-3 py-2 text-sidebar placeholder-sidebar-muted focus:outline-none focus:ring-1 ring-accent";
 
   return (
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
@@ -162,13 +162,13 @@ export function AddCustomProviderModal({
                 className={cn(
                   "relative h-6 w-10 shrink-0 rounded-full transition-colors",
                   form.useMaxCompletionTokens
-                    ? "bg-emerald-500"
-                    : "bg-white/20"
+                    ? "bg-accent"
+                    : "bg-sidebar-muted/30"
                 )}
               >
                 <span
                   className={cn(
-                    "absolute top-1 h-4 w-4 rounded-full bg-white transition-[left]",
+                    "absolute top-1 h-4 w-4 rounded-full bg-accent-foreground transition-[left]",
                     form.useMaxCompletionTokens ? "left-5" : "left-1"
                   )}
                 />
@@ -185,7 +185,7 @@ export function AddCustomProviderModal({
               </Dialog.Close>
               <button
                 type="submit"
-                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600"
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:opacity-90"
               >
                 {t("addCustomProviderAdd")}
               </button>

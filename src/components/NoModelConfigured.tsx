@@ -23,9 +23,8 @@ export function NoModelConfigured() {
           type="button"
           onClick={() => navigate("/settings/provider")}
           className={cn(
-            "flex items-center gap-2 rounded-lg bg-emerald-500 px-6 py-3",
-            "text-sm font-medium text-white",
-            "hover:bg-emerald-600 transition-colors"
+            "flex items-center gap-2 rounded-lg bg-accent px-6 py-3 text-accent-foreground",
+            "text-sm font-medium hover:opacity-90 transition-opacity"
           )}
         >
           <span>{t("goToProviderSettings")}</span>

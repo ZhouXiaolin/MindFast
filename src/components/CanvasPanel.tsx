@@ -1,11 +1,26 @@
 import { useRef, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "../lib/cn";
+import { useAppStore } from "../stores/appStore";
+
+function getThemeColors(): { hover: string; muted: string } {
+  if (typeof document === "undefined")
+    return { hover: "transparent", muted: "transparent" };
+  const root = document.documentElement;
+  const style = getComputedStyle(root);
+  return {
+    hover: style.getPropertyValue("--sidebar-hover").trim() || style.getPropertyValue("--base30-one-bg").trim() || "transparent",
+    muted: style.getPropertyValue("--sidebar-muted").trim() || style.getPropertyValue("--base30-grey-fg").trim() || "transparent",
+  };
+}
 
 export function CanvasPanel() {
   const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ckReady, setCkReady] = useState(false);
+  const themePresetIdDark = useAppStore((s) => s.themePresetIdDark);
+  const themePresetIdLight = useAppStore((s) => s.themePresetIdLight);
+  const colorMode = useAppStore((s) => s.colorMode);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,17 +49,18 @@ export function CanvasPanel() {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    const { hover, muted } = getThemeColors();
     const dpr = window.devicePixelRatio ?? 1;
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
     ctx.scale(dpr, dpr);
-    ctx.fillStyle = "#27272a";
+    ctx.fillStyle = hover;
     ctx.fillRect(0, 0, rect.width, rect.height);
-    ctx.fillStyle = "#a1a1aa";
+    ctx.fillStyle = muted;
     ctx.font = "14px system-ui";
     ctx.fillText("Canvas area – CanvasKit: " + (ckReady ? "ready" : "loading…"), 16, 24);
-  }, [ckReady]);
+  }, [ckReady, themePresetIdDark, themePresetIdLight, colorMode]);
 
   return (
     <div className={cn("rounded-xl border border-sidebar bg-sidebar-hover p-4")}>

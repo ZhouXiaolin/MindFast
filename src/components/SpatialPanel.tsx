@@ -36,7 +36,7 @@ export function SpatialPanel() {
               [{item.minX},{item.minY}]–[{item.maxX},{item.maxY}]
             </span>
             {found.some((f) => (f as { id?: string }).id === item.id) && (
-              <span className="text-emerald-400">✓ in query</span>
+              <span className="text-accent">✓ in query</span>
             )}
           </li>
         ))}

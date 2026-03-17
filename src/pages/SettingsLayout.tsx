@@ -33,8 +33,8 @@ export function SettingsLayout() {
                 cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                   isActive
-                    ? "bg-white/10 font-medium"
-                    : "hover:bg-white/5"
+                    ? "bg-sidebar-panel-strong font-medium"
+                    : "hover:bg-sidebar-panel"
                 )
               }
             >

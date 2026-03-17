@@ -57,16 +57,16 @@ function ToolHeader({
     state === "inprogress" ? (
       <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-sidebar-muted border-t-sidebar" />
     ) : state === "complete" ? (
-      <span className="h-3.5 w-3.5 rounded-full bg-emerald-500/80" />
+      <span className="h-3.5 w-3.5 rounded-full bg-accent/80" />
     ) : (
-      <span className="h-3.5 w-3.5 rounded-full bg-red-500/80" />
+      <span className="h-3.5 w-3.5 rounded-full bg-semantic-error/80" />
     );
 
   const headerContent = (
     <div className="flex items-center gap-2 text-sm text-sidebar-muted">
       {state === "inprogress" && statusIcon}
       <FileCode2 className="h-3.5 w-3.5 shrink-0" />
-      <span className={state === "error" ? "text-red-400" : state === "complete" ? "text-emerald-400" : ""}>
+      <span className={state === "error" ? "text-semantic-error" : state === "complete" ? "text-accent" : ""}>
         {label}
       </span>
       {filename && (
@@ -81,7 +81,7 @@ function ToolHeader({
 
   return (
     <Collapsible.Root open={open} onOpenChange={setOpen}>
-      <Collapsible.Trigger className="flex w-full items-center justify-between gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 rounded">
+      <Collapsible.Trigger className="flex w-full items-center justify-between gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded">
         {headerContent}
         <span className="shrink-0 text-sidebar-muted">
           {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -128,7 +128,7 @@ export function renderArtifactsTool(
               ) : content ? (
                 <CodeBlock code={content} language={getLanguageFromFilename(filename)} />
               ) : null}
-              <div className="mt-2 text-sm text-red-400">{getTextOutput(result) || "An error occurred"}</div>
+              <div className="mt-2 text-sm text-semantic-error">{getTextOutput(result) || "An error occurred"}</div>
             </ToolHeader>
           </div>
         ),
@@ -138,7 +138,7 @@ export function renderArtifactsTool(
       content: (
         <div className="space-y-2">
           <ToolHeader state={state} label={headerText} filename={filename} onOpenArtifact={onOpenArtifact} />
-          <div className="text-sm text-red-400">{getTextOutput(result) || "An error occurred"}</div>
+          <div className="text-sm text-semantic-error">{getTextOutput(result) || "An error occurred"}</div>
         </div>
       ),
     };

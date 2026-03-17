@@ -57,7 +57,7 @@ function ArtifactTabTrigger({
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-sidebar-muted transition-colors",
         "data-[state=active]:bg-sidebar-panel-strong data-[state=active]:text-sidebar",
-        "hover:text-sidebar focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
+        "hover:text-sidebar focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       )}
     >
       <Icon className="h-3.5 w-3.5 shrink-0" />
@@ -107,7 +107,7 @@ export function ArtifactPreview({ filename, content }: ArtifactPreviewProps) {
         <Tabs.Content value="preview" className="flex-1 min-h-0 outline-none">
           {artifactKind === "html" ? (
             <div className="flex h-full min-h-0 flex-col p-4">
-              <div className="flex-1 overflow-hidden rounded-[1.25rem] border border-sidebar-soft bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.25)]">
+              <div className="flex-1 overflow-hidden rounded-[1.25rem] border border-sidebar-soft bg-sidebar-panel-strong shadow-[inset_0_1px_0_color-mix(in_srgb,var(--sidebar-fg)_0.08,transparent)]">
                 <SandboxedIframe
                   htmlContent={content}
                   className="h-full w-full border-0 bg-white"
@@ -121,7 +121,7 @@ export function ArtifactPreview({ filename, content }: ArtifactPreviewProps) {
                 />
               </div>
               {runtimeError ? (
-                <div className="mt-3 rounded-2xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                <div className="mt-3 rounded-2xl border border-semantic-error/25 bg-semantic-error/10 px-3 py-2 text-sm text-semantic-error">
                   {runtimeError}
                 </div>
               ) : null}
@@ -151,9 +151,9 @@ export function ArtifactPreview({ filename, content }: ArtifactPreviewProps) {
                     className={cn(
                       "rounded-xl px-3 py-2",
                       entry.type === "error"
-                        ? "bg-red-500/10 text-red-300"
+                        ? "bg-semantic-error/10 text-semantic-error"
                         : entry.type === "warn"
-                          ? "bg-amber-500/10 text-amber-200"
+                          ? "bg-semantic-warning/10 text-semantic-warning"
                           : "bg-sidebar-panel-strong"
                     )}
                   >

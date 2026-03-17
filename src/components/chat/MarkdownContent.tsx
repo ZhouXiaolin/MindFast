@@ -44,7 +44,7 @@ const markdownComponents: Components = {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="font-medium text-emerald-300 underline decoration-emerald-500/40 underline-offset-4 transition-colors hover:text-emerald-200"
+      className="font-medium text-accent underline decoration-accent/40 underline-offset-4 transition-colors hover:text-accent-muted"
     >
       {children}
     </a>

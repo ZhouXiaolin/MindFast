@@ -86,12 +86,12 @@ export function AssistantMessage({
         </div>
       ) : null}
       {stopReason === "error" && errorMessage ? (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+        <div className="rounded-lg border border-semantic-error/30 bg-semantic-error/10 p-3 text-sm text-semantic-error">
           <strong>Error:</strong> {errorMessage}
         </div>
       ) : null}
       {stopReason === "aborted" ? (
-        <span className="text-sm italic text-red-400">Request aborted</span>
+        <span className="text-sm italic text-semantic-error">Request aborted</span>
       ) : null}
     </div>
   );

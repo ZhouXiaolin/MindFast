@@ -370,7 +370,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
                 className={cn(
                   "shrink-0 rounded-full border px-3 py-1.5 text-xs font-mono whitespace-nowrap transition-colors",
                   selectedFilename === artifact.filename
-                    ? "border-emerald-500/30 bg-emerald-500/10 text-sidebar"
+                    ? "border-accent/30 bg-accent/10 text-sidebar"
                     : "border-sidebar-soft bg-sidebar-panel text-sidebar-muted hover:bg-sidebar-panel-strong hover:text-sidebar"
                 )}
               >

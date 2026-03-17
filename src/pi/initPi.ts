@@ -310,7 +310,7 @@ export function createCustomModelSelector(
   const searchInput = document.createElement("input");
   searchInput.type = "text";
   searchInput.placeholder = "Search models...";
-  searchInput.className = "w-full rounded border border-sidebar bg-app px-3 py-2 text-sm text-app placeholder:text-app-muted focus:outline-none focus:ring-1 focus:ring-emerald-500";
+  searchInput.className = "w-full rounded border border-sidebar bg-app px-3 py-2 text-sm text-app placeholder:text-sidebar-muted focus:outline-none focus:ring-1 focus:ring-[var(--accent)]";
   searchContainer.appendChild(searchInput);
 
   // Model list container
@@ -339,13 +339,13 @@ export function createCustomModelSelector(
       const button = document.createElement("button");
       button.className = `w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
         isSelected
-          ? "bg-emerald-500/20 text-emerald-400"
+          ? "bg-accent/20 text-accent"
           : "text-sidebar hover:bg-sidebar-hover"
       }`;
       button.innerHTML = `
         <div class="flex items-center justify-between">
           <span class="truncate">${model.name}</span>
-          ${isSelected ? '<span class="ml-2 text-xs text-emerald-400">✓</span>' : ''}
+          ${isSelected ? '<span class="ml-2 text-xs text-accent">✓</span>' : ''}
         </div>
         <div class="text-xs text-sidebar-muted">${model.providerId}</div>
       `;

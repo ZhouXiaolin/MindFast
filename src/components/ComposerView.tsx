@@ -40,7 +40,7 @@ export function ComposerView() {
       {/* Welcome: star + "Back at it, Solaren" */}
       <div className="flex flex-1 flex-col items-center justify-center px-4 pb-6">
         <div className="mb-6 flex items-center justify-center gap-2">
-          <span className="text-amber-400/90" aria-hidden>
+          <span className="text-semantic-warning" aria-hidden>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
               <path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7-6.3-4.6L5.7 21l2.3-7-6-4.6h7.6L12 2z" />
             </svg>

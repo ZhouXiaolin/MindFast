@@ -9,6 +9,12 @@ interface AppState {
   setLang: (lang: Lang) => void;
   colorMode: ColorMode;
   setColorMode: (mode: ColorMode) => void;
+  /** Base46 深色预设 id，见 themes/base46.ts */
+  themePresetIdDark: string;
+  setThemePresetIdDark: (id: string) => void;
+  /** Base46 浅色预设 id */
+  themePresetIdLight: string;
+  setThemePresetIdLight: (id: string) => void;
   chatFont: ChatFont;
   setChatFont: (font: ChatFont) => void;
   sidebarOpen: boolean;
@@ -26,6 +32,10 @@ export const useAppStore = create<AppState>((set) => ({
   setLang: (lang) => set({ lang }),
   colorMode: "dark",
   setColorMode: (colorMode) => set({ colorMode }),
+  themePresetIdDark: "default-dark",
+  setThemePresetIdDark: (themePresetIdDark) => set({ themePresetIdDark }),
+  themePresetIdLight: "default-light",
+  setThemePresetIdLight: (themePresetIdLight) => set({ themePresetIdLight }),
   chatFont: "default",
   setChatFont: (chatFont) => set({ chatFont }),
   sidebarOpen: true,

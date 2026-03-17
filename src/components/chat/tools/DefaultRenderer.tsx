@@ -36,13 +36,13 @@ function ToolHeader({
         <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-sidebar-muted border-t-sidebar" />
       )}
       {state === "complete" && (
-        <span className="h-3.5 w-3.5 rounded-full bg-emerald-500/80" aria-hidden />
+        <span className="h-3.5 w-3.5 rounded-full bg-accent/80" aria-hidden />
       )}
       {state === "error" && (
-        <span className="h-3.5 w-3.5 rounded-full bg-red-500/80" aria-hidden />
+        <span className="h-3.5 w-3.5 rounded-full bg-semantic-error/80" aria-hidden />
       )}
       <Code className="h-3.5 w-3.5 shrink-0" />
-      <span className={state === "error" ? "text-red-400" : state === "complete" ? "text-emerald-400" : ""}>
+      <span className={state === "error" ? "text-semantic-error" : state === "complete" ? "text-accent" : ""}>
         {label}
       </span>
     </div>

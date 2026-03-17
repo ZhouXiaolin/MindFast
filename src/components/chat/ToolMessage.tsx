@@ -49,7 +49,7 @@ export function ToolMessage({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-sidebar-soft bg-sidebar-panel px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
+        "rounded-2xl border border-sidebar-soft bg-sidebar-panel px-3 py-3 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--sidebar-fg)_0.04,transparent)]",
         "text-sidebar"
       )}
     >
