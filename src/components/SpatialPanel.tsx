@@ -23,15 +23,15 @@ export function SpatialPanel() {
   const found = useMemo(() => search(query.minX, query.minY, query.maxX, query.maxY), [search]);
 
   return (
-    <div className={cn("rounded-xl border border-zinc-800 bg-zinc-900 p-4")}>
-      <h3 className="mb-2 text-sm font-medium text-zinc-300">{t("spatial")}</h3>
-      <p className="mb-2 text-xs text-zinc-500">
+    <div className={cn("rounded-xl border border-sidebar bg-sidebar-hover p-4")}>
+      <h3 className="mb-2 text-sm font-medium text-sidebar">{t("spatial")}</h3>
+      <p className="mb-2 text-xs text-sidebar-muted">
         RBush 示例：当前 {items.length} 个矩形，查询区域 [{query.minX},{query.minY}]–[{query.maxX},{query.maxY}]
       </p>
-      <ul className="space-y-1 text-sm">
+      <ul className="space-y-1 text-sm text-app">
         {items.map((item) => (
           <li key={item.id} className="flex gap-2">
-            <span className="text-zinc-400">{item.id}:</span>
+            <span className="text-sidebar-muted">{item.id}:</span>
             <span>
               [{item.minX},{item.minY}]–[{item.maxX},{item.maxY}]
             </span>

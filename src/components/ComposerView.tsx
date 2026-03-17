@@ -25,12 +25,12 @@ export function ComposerView() {
     <div className="flex h-full flex-col">
       {/* Top: Free plan · Upgrade (single pill, dot separator - matches demo) */}
       <div className="flex shrink-0 justify-center px-4 pt-4">
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-black/40 px-4 py-1.5 text-sm">
-          <span className="text-zinc-400">{t("freePlan")}</span>
-          <span className="text-zinc-600" aria-hidden>·</span>
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-sidebar px-4 py-1.5 text-sm">
+          <span className="text-sidebar-muted">{t("freePlan")}</span>
+          <span className="text-sidebar-muted/80" aria-hidden>·</span>
           <a
             href="#upgrade"
-            className="font-medium text-zinc-100 hover:text-white"
+            className="font-medium text-sidebar hover:opacity-90"
           >
             {t("upgrade")}
           </a>
@@ -45,7 +45,7 @@ export function ComposerView() {
               <path d="M12 2l2.4 7.4h7.6l-6 4.6 2.3 7-6.3-4.6L5.7 21l2.3-7-6-4.6h7.6L12 2z" />
             </svg>
           </span>
-          <p className="text-xl text-zinc-100">
+          <p className="text-xl text-app">
             {t("backAtIt", { name: userName })}
           </p>
         </div>
@@ -53,12 +53,12 @@ export function ComposerView() {
         {/* Composer card + Prompt categories directly below (not at viewport bottom) */}
         <div className="w-full max-w-2xl">
           <div
-            className="rounded-2xl border border-zinc-700/80 bg-zinc-900/90 shadow-xl"
+            className="rounded-2xl border border-sidebar bg-sidebar shadow-xl"
             role="group"
           >
             <div className="p-4">
               <textarea
-                className="min-h-[120px] w-full resize-none bg-transparent text-zinc-100 placeholder-zinc-500 outline-none"
+                className="min-h-[120px] w-full resize-none bg-transparent text-app placeholder-sidebar-muted outline-none"
                 rows={4}
                 placeholder={t("howCanIHelp")}
                 value={prompt}
@@ -66,13 +66,13 @@ export function ComposerView() {
                 aria-label={t("writePromptToClaude")}
               />
             </div>
-            <div className="flex items-center justify-between border-t border-zinc-700/60 px-3 py-2">
+            <div className="flex items-center justify-between border-t border-sidebar px-3 py-2">
               <div className="flex items-center gap-0.5">
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger asChild>
                     <button
                       type="button"
-                      className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                      className="rounded-lg p-2 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
                       aria-label={t("toggleMenu")}
                     >
                       <Plus className="h-5 w-5" />
@@ -80,11 +80,11 @@ export function ComposerView() {
                   </DropdownMenu.Trigger>
                   <DropdownMenu.Portal>
                     <DropdownMenu.Content
-                      className="min-w-35 rounded-lg border border-zinc-700 bg-zinc-900 p-1 shadow-lg"
+                      className="min-w-35 rounded-lg border border-sidebar bg-sidebar p-1 shadow-lg text-sidebar"
                       sideOffset={6}
                     >
                       <DropdownMenu.Item
-                        className="cursor-pointer rounded px-3 py-2 text-sm outline-none data-highlighted:bg-zinc-800"
+                        className="cursor-pointer rounded px-3 py-2 text-sm outline-none data-highlighted:bg-sidebar-hover"
                         onSelect={() => {}}
                       >
                         Attach file
@@ -96,7 +96,7 @@ export function ComposerView() {
                   <DropdownMenu.Trigger asChild>
                     <button
                       type="button"
-                      className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-zinc-300 hover:bg-zinc-800"
+                      className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-sidebar-muted hover:bg-sidebar-hover"
                       aria-haspopup="menu"
                     >
                       {t("modelName")}
@@ -105,11 +105,11 @@ export function ComposerView() {
                   </DropdownMenu.Trigger>
                   <DropdownMenu.Portal>
                     <DropdownMenu.Content
-                      className="min-w-40 rounded-lg border border-zinc-700 bg-zinc-900 p-1 shadow-lg"
+                      className="min-w-40 rounded-lg border border-sidebar bg-sidebar p-1 shadow-lg text-sidebar"
                       sideOffset={6}
                     >
                       <DropdownMenu.Item
-                        className="cursor-pointer rounded px-3 py-2 text-sm outline-none data-highlighted:bg-zinc-800"
+                        className="cursor-pointer rounded px-3 py-2 text-sm outline-none data-highlighted:bg-sidebar-hover"
                         onSelect={() => {}}
                       >
                         {t("modelName")}
@@ -120,7 +120,7 @@ export function ComposerView() {
               </div>
               <button
                 type="button"
-                className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 disabled:opacity-40"
+                className="rounded-lg p-2 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar disabled:opacity-40"
                 aria-label="Send"
                 disabled={!prompt.trim()}
               >
@@ -147,9 +147,9 @@ export function ComposerView() {
                     key={value}
                     value={value}
                     className={cn(
-                      "flex items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-800/50 px-4 py-2 text-sm text-zinc-300 transition-colors",
-                      "hover:bg-zinc-800 hover:text-zinc-100",
-                      "data-[state=active]:border-zinc-600 data-[state=active]:bg-zinc-800 data-[state=active]:text-zinc-100"
+                      "flex items-center gap-2 rounded-full border border-sidebar bg-sidebar-hover/80 px-4 py-2 text-sm text-sidebar-muted transition-colors",
+                      "hover:bg-sidebar-hover hover:text-sidebar",
+                      "data-[state=active]:border-sidebar data-[state=active]:bg-sidebar-hover data-[state=active]:text-sidebar"
                     )}
                   >
                     <Icon className="h-4 w-4 shrink-0" />

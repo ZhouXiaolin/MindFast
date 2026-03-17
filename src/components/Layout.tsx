@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { NavLink } from "react-router-dom";
 import { cn } from "../lib/cn";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -75,7 +75,8 @@ const MOCK_CHATS = [
 
 export function Layout() {
   const { t } = useTranslation();
-  const { setLang, sidebarOpen, toggleSidebar, userName } = useAppStore();
+  const navigate = useNavigate();
+  const { setLang, sidebarOpen, toggleSidebar, userName, userEmail } = useAppStore();
   const [recentsOpen, setRecentsOpen] = useState(true);
 
   const topLinks: { labelKey: string; path: string; icon: React.ReactNode }[] = [
@@ -92,10 +93,10 @@ export function Layout() {
   ];
 
   return (
-    <div className="flex h-screen bg-[#282828] text-zinc-100">
+    <div className="flex h-screen bg-app text-app">
       <aside
         className={cn(
-          "flex flex-col border-r border-zinc-800 bg-zinc-900/95 transition-[width]",
+          "flex flex-col border-r border-sidebar bg-sidebar transition-[width]",
           sidebarOpen ? "w-56" : "w-14"
         )}
         role="navigation"
@@ -104,19 +105,19 @@ export function Layout() {
         {/* Top: app name + Close sidebar (collapsed: center button to align with icons) */}
         <div
           className={cn(
-            "flex h-12 shrink-0 items-center border-b border-zinc-800 px-3",
+            "flex h-12 shrink-0 items-center border-b border-sidebar px-3",
             sidebarOpen ? "justify-between" : "justify-center"
           )}
         >
           {sidebarOpen && (
-            <NavLink to="/" className="font-semibold text-zinc-100">
+            <NavLink to="/" className="font-semibold text-sidebar">
               {t("app")}
             </NavLink>
           )}
           <button
             type="button"
             onClick={toggleSidebar}
-            className="rounded p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+            className="rounded p-1.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
             aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
           >
             {sidebarOpen ? (
@@ -128,7 +129,7 @@ export function Layout() {
         </div>
 
         {/* New chat, Search, Customize */}
-        <nav className="shrink-0 gap-0.5 border-b border-zinc-800 p-2">
+        <nav className="shrink-0 gap-0.5 border-b border-sidebar p-2">
           {topLinks.map((item) => (
             <NavLink
               key={item.labelKey}
@@ -139,8 +140,8 @@ export function Layout() {
                   "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
                   !sidebarOpen && "justify-center px-0",
                   isActive
-                    ? "bg-zinc-800 text-zinc-100"
-                    : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
+                    ? "bg-sidebar-hover text-sidebar"
+                    : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
                 )
               }
             >
@@ -162,8 +163,8 @@ export function Layout() {
                     "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
                     !sidebarOpen && "justify-center px-0",
                     isActive
-                      ? "bg-zinc-800 text-zinc-100"
-                      : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
+                      ? "bg-sidebar-hover text-sidebar"
+                      : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
                   )
                 }
               >
@@ -172,7 +173,7 @@ export function Layout() {
                   <span className="min-w-0 flex-1 truncate">
                     {t(item.labelKey)}
                     {item.labelKey === "code" && (
-                      <span className="ml-1 text-xs text-zinc-500">· {t("upgrade")}</span>
+                      <span className="ml-1 text-xs text-sidebar-muted">· {t("upgrade")}</span>
                     )}
                   </span>
                 )}
@@ -184,7 +185,7 @@ export function Layout() {
                 <button
                   type="button"
                   onClick={() => setRecentsOpen((o) => !o)}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
                   aria-expanded={recentsOpen}
                 >
                   <span>{t("recents")}</span>
@@ -200,8 +201,8 @@ export function Layout() {
                             cn(
                               "block truncate rounded-lg px-3 py-2 text-sm",
                               isActive
-                                ? "bg-zinc-800 text-zinc-100"
-                                : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
+                                ? "bg-sidebar-hover text-sidebar"
+                                : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
                             )
                           }
                         >
@@ -213,7 +214,7 @@ export function Layout() {
                 )}
                 <NavLink
                   to="/chats"
-                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
+                  className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
                 >
                   <MessageSquare className="h-4 w-4 shrink-0" />
                   {t("allChats")}
@@ -223,53 +224,127 @@ export function Layout() {
           </div>
 
           {/* Bottom: User */}
-          <div className="shrink-0 border-t border-zinc-800 p-2">
+          <div className="shrink-0 border-t border-sidebar p-2">
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
                 <button
                   type="button"
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-zinc-300 hover:bg-zinc-800",
+                    "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-sidebar-muted hover:bg-sidebar-hover",
                     !sidebarOpen && "justify-center px-0"
                   )}
                   aria-haspopup="menu"
                   aria-label={`${userName}, ${t("userSettings")}`}
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-600 text-xs font-medium">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sidebar-hover text-xs font-medium text-sidebar">
                     {userName.slice(0, 2).toUpperCase()}
                   </span>
                   {sidebarOpen && (
                     <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium">{userName}</div>
-                      <div className="truncate text-xs text-zinc-500">{t("freePlan")}</div>
+                      <div className="truncate font-medium text-sidebar">{userName}</div>
+                      <div className="truncate text-xs text-sidebar-muted">{t("freePlan")}</div>
                     </div>
                   )}
                 </button>
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>
                 <DropdownMenu.Content
-                  className="min-w-[180px] rounded-lg border border-zinc-800 bg-zinc-900 p-1 shadow-lg"
+                  className="min-w-[220px] rounded-lg border border-sidebar bg-sidebar py-1.5 shadow-xl text-sidebar z-50"
                   sideOffset={6}
-                  side="right"
+                  side="left"
+                  align="end"
                 >
+                  <div className="px-3 py-2 text-sm text-sidebar-muted">
+                    {userEmail}
+                  </div>
                   <DropdownMenu.Item
-                    className="cursor-pointer rounded px-3 py-2 text-sm outline-none data-highlighted:bg-zinc-800"
+                    className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
+                    onSelect={() => navigate("/settings/general")}
+                  >
+                    <span className="flex w-full justify-between">
+                      <span>{t("userSettings")}</span>
+                      <span className="text-xs text-sidebar-muted">{t("settingsShortcut")}</span>
+                    </span>
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Sub>
+                    <DropdownMenu.SubTrigger className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover data-[state=open]:bg-sidebar-hover">
+                      {t("lang")}
+                    </DropdownMenu.SubTrigger>
+                    <DropdownMenu.Portal>
+                      <DropdownMenu.SubContent
+                        className="min-w-40 rounded-lg border border-sidebar bg-sidebar p-1 shadow-lg"
+                        sideOffset={4}
+                      >
+                        <DropdownMenu.Item
+                          className="cursor-pointer rounded px-2 py-1.5 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
+                          onSelect={() => setLang("en")}
+                        >
+                          English
+                        </DropdownMenu.Item>
+                        <DropdownMenu.Item
+                          className="cursor-pointer rounded px-2 py-1.5 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
+                          onSelect={() => setLang("zh")}
+                        >
+                          中文
+                        </DropdownMenu.Item>
+                      </DropdownMenu.SubContent>
+                    </DropdownMenu.Portal>
+                  </DropdownMenu.Sub>
+                  <DropdownMenu.Item
+                    className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
                     onSelect={() => {}}
                   >
-                    {t("userSettings")}
+                    {t("getHelp")}
                   </DropdownMenu.Item>
-                  <DropdownMenu.Separator className="my-1 h-px bg-zinc-800" />
+                  <DropdownMenu.Separator className="my-1 h-px bg-sidebar-border" />
                   <DropdownMenu.Item
-                    className="cursor-pointer rounded px-3 py-2 text-sm outline-none data-highlighted:bg-zinc-800"
-                    onSelect={() => setLang("en")}
+                    className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
+                    onSelect={() => {}}
                   >
-                    English
+                    {t("upgradePlan")}
                   </DropdownMenu.Item>
                   <DropdownMenu.Item
-                    className="cursor-pointer rounded px-3 py-2 text-sm outline-none data-highlighted:bg-zinc-800"
-                    onSelect={() => setLang("zh")}
+                    className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
+                    onSelect={() => {}}
                   >
-                    中文
+                    {t("getApps")}
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item
+                    className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
+                    onSelect={() => {}}
+                  >
+                    {t("giftClaude")}
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Sub>
+                    <DropdownMenu.SubTrigger className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover data-[state=open]:bg-sidebar-hover">
+                      {t("learnMore")}
+                    </DropdownMenu.SubTrigger>
+                    <DropdownMenu.Portal>
+                      <DropdownMenu.SubContent
+                        className="min-w-40 rounded-lg border border-sidebar bg-sidebar p-1 shadow-lg"
+                        sideOffset={4}
+                      >
+                        <DropdownMenu.Item
+                          className="cursor-pointer rounded px-2 py-1.5 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
+                          onSelect={() => {}}
+                        >
+                          Docs
+                        </DropdownMenu.Item>
+                        <DropdownMenu.Item
+                          className="cursor-pointer rounded px-2 py-1.5 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
+                          onSelect={() => {}}
+                        >
+                          Blog
+                        </DropdownMenu.Item>
+                      </DropdownMenu.SubContent>
+                    </DropdownMenu.Portal>
+                  </DropdownMenu.Sub>
+                  <DropdownMenu.Separator className="my-1 h-px bg-sidebar-border" />
+                  <DropdownMenu.Item
+                    className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
+                    onSelect={() => {}}
+                  >
+                    {t("logOut")}
                   </DropdownMenu.Item>
                 </DropdownMenu.Content>
               </DropdownMenu.Portal>

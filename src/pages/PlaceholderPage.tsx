@@ -17,7 +17,7 @@ export function PlaceholderPage() {
 
   return (
     <div className="flex flex-1 items-center justify-center p-8">
-      <p className="text-zinc-500">{t("welcome")} — {t(labelKey)}</p>
+      <p className="text-app">{t("welcome")} — {t(labelKey)}</p>
     </div>
   );
 }

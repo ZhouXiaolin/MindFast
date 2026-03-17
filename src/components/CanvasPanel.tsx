@@ -47,16 +47,16 @@ export function CanvasPanel() {
   }, [ckReady]);
 
   return (
-    <div className={cn("rounded-xl border border-zinc-800 bg-zinc-900 p-4")}>
-      <h3 className="mb-2 text-sm font-medium text-zinc-300">{t("canvas")}</h3>
-      <div className="aspect-video w-full max-w-2xl overflow-hidden rounded-lg bg-zinc-800">
+    <div className={cn("rounded-xl border border-sidebar bg-sidebar-hover p-4")}>
+      <h3 className="mb-2 text-sm font-medium text-sidebar">{t("canvas")}</h3>
+      <div className="aspect-video w-full max-w-2xl overflow-hidden rounded-lg bg-sidebar">
         <canvas
           ref={canvasRef}
           className="h-full w-full"
           style={{ width: "100%", height: "100%" }}
         />
       </div>
-      <p className="mt-2 text-xs text-zinc-500">
+      <p className="mt-2 text-xs text-sidebar-muted">
         canvaskit-wasm: {ckReady ? "loaded" : "loading…"}
       </p>
     </div>

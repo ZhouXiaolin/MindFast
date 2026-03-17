@@ -7,7 +7,48 @@
     height: 100%;
     margin: 0;
   }
-  body {
-    background-color: #282828;
+  /* Dark theme — 以侧边栏为准，全站字色统一用 sidebar-fg / sidebar-muted */
+  :root,
+  [data-theme="dark"] {
+    --app-bg: #404040;
+    --sidebar-bg: #3f3f46;
+    --sidebar-fg: #fafafa;
+    --sidebar-muted: #a1a1aa;
+    --sidebar-border: #52525b;
+    --sidebar-hover: #27272a;
   }
+  /* Light theme — 以侧边栏为准 */
+  [data-theme="light"] {
+    --app-bg: #faf9f5;
+    --sidebar-bg: #eae9e4;
+    --sidebar-fg: #141413;
+    --sidebar-muted: #73726c;
+    --sidebar-border: rgba(31, 30, 29, 0.2);
+    --sidebar-hover: #dddcd6;
+  }
+  body {
+    background-color: var(--app-bg);
+    color: var(--sidebar-fg);
+  }
+}
+
+/* Global theme utilities — 全站字色统一用 sidebar-fg / sidebar-muted */
+@layer utilities {
+  .bg-app { background-color: var(--app-bg); }
+  .text-app { color: var(--sidebar-fg); }
+  .bg-sidebar { background-color: var(--sidebar-bg); }
+  .text-sidebar { color: var(--sidebar-fg); }
+  .text-sidebar-muted { color: var(--sidebar-muted); }
+  .border-sidebar { border-color: var(--sidebar-border); }
+  .bg-sidebar-hover { background-color: var(--sidebar-hover); }
+  .hover\:bg-sidebar-hover:hover { background-color: var(--sidebar-hover); }
+  .hover\:text-sidebar:hover { color: var(--sidebar-fg); }
+  .border-app { border-color: var(--sidebar-border); }
+  .bg-sidebar-border { background-color: var(--sidebar-border); }
+}
+
+/* Settings 与侧边栏统一：使用同一套 sidebar 变量 */
+.settings-page {
+  background-color: var(--sidebar-bg);
+  color: var(--sidebar-fg);
 }
