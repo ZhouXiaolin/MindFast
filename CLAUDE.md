@@ -1,0 +1,1 @@
+- use bun replace npm
