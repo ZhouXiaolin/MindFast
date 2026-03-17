@@ -14,7 +14,7 @@
     --sidebar-bg: #3f3f46;
     --sidebar-fg: #fafafa;
     --sidebar-muted: #a1a1aa;
-    --sidebar-border: #52525b;
+    --sidebar-border: rgba(255, 255, 255, 0.08);
     --sidebar-hover: #27272a;
   }
   /* Light theme — 以侧边栏为准 */
@@ -23,7 +23,7 @@
     --sidebar-bg: #eae9e4;
     --sidebar-fg: #141413;
     --sidebar-muted: #73726c;
-    --sidebar-border: rgba(31, 30, 29, 0.2);
+    --sidebar-border: rgba(0, 0, 0, 0.06);
     --sidebar-hover: #dddcd6;
   }
   body {
@@ -51,4 +51,12 @@
 .settings-page {
   background-color: var(--sidebar-bg);
   color: var(--sidebar-fg);
+}
+
+/* Provider 页分割线 */
+.settings-provider-divider {
+  border-right: 1px solid var(--sidebar-border);
+}
+.settings-provider-divider-t {
+  border-top: 1px solid var(--sidebar-border);
 }

@@ -4,12 +4,7 @@ import { cn } from "../lib/cn";
 
 const SETTINGS_LINKS = [
   { path: "general", labelKey: "settingsGeneral" },
-  { path: "account", labelKey: "settingsAccount" },
-  { path: "privacy", labelKey: "settingsPrivacy" },
-  { path: "billing", labelKey: "settingsBilling" },
-  { path: "capabilities", labelKey: "settingsCapabilities" },
-  { path: "connectors", labelKey: "settingsConnectors" },
-  { path: "claude-code", labelKey: "settingsClaudeCode" },
+  { path: "provider", labelKey: "settingsProvider" },
 ] as const;
 
 export function SettingsLayout() {
