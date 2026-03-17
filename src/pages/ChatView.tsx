@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useParams } from "react-router-dom";
 import { initPi, getAppStorage } from "../pi/initPi";
 import { setApiKeyPromptHandler } from "../pi/apiKeyPrompt";
 import { NoModelConfigured } from "../components/NoModelConfigured";
@@ -6,6 +7,7 @@ import { ChatUI } from "../components/ChatUI";
 import { ApiKeyPromptDialog } from "../components/ApiKeyPromptDialog";
 
 export function ChatView() {
+  const { id: sessionId } = useParams<{ id: string }>();
   const [hasConfig, setHasConfig] = useState<boolean | null>(null);
   const [apiKeyDialog, setApiKeyDialog] = useState<{ open: boolean; provider: string }>({
     open: false,
@@ -73,10 +75,18 @@ export function ChatView() {
     return <NoModelConfigured />;
   }
 
+  if (!sessionId) {
+    return (
+      <div className="flex h-full items-center justify-center p-6 text-sidebar-muted">
+        Loading…
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="flex h-full w-full flex-col" style={{ minHeight: 0 }}>
-        <ChatUI />
+        <ChatUI sessionId={sessionId} />
       </div>
       <ApiKeyPromptDialog
         provider={apiKeyDialog.provider}

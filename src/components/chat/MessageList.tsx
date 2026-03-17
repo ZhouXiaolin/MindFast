@@ -12,14 +12,6 @@ interface MessageListProps {
   onOpenArtifact?: (filename: string) => void;
 }
 
-function getMessageContent(msg: AgentMessage): string {
-  if (msg.role === "user") {
-    const c = msg.content as string | undefined;
-    return typeof c === "string" ? c : "";
-  }
-  return "";
-}
-
 export function MessageList({
   messages,
   tools = [],
@@ -40,11 +32,11 @@ export function MessageList({
   let index = 0;
 
   for (const msg of messages) {
-    if ((msg as { role: string }).role === "artifact") continue;
+    const role = (msg as { role: string }).role;
+    if (role === "artifact") continue;
 
-    if (msg.role === "user") {
-      const content = getMessageContent(msg);
-      items.push(<UserMessage key={`msg-${index}`} content={content} />);
+    if (role === "user" || role === "user-with-attachments") {
+      items.push(<UserMessage key={`msg-${index}`} message={msg as any} />);
       index++;
     } else if (msg.role === "assistant") {
       const amsg = msg as AssistantMessageType;

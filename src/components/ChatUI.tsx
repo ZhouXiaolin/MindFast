@@ -1,55 +1,75 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import type { AgentMessage } from "@mariozechner/pi-agent-core";
-import type { Agent } from "@mariozechner/pi-agent-core";
-import type { ToolResultMessage } from "@mariozechner/pi-ai";
+import type { Agent, AgentMessage, ThinkingLevel } from "@mariozechner/pi-agent-core";
+import type { Model, ToolResultMessage } from "@mariozechner/pi-ai";
 import type { ArtifactsStore } from "../pi/artifacts/store";
-import { initPi, createCustomModelSelector, getAgent } from "../pi/initPi";
+import { initPi, createCustomModelSelector, getAgent, getAppStorage } from "../pi/initPi";
 import { formatUsage, type Usage } from "../lib/format";
 import { MessageList } from "./chat/MessageList";
 import { StreamingMessageContainer } from "./chat/StreamingMessageContainer";
 import { MessageEditor } from "./chat/MessageEditor";
 import { cn } from "../lib/cn";
+import { ArtifactPreview } from "./artifacts/ArtifactPreview";
+import type { Artifact } from "../pi/artifacts/types";
+import { buildSessionMetadata } from "../lib/workspace";
+import { useAppStore } from "../stores/appStore";
 
-export function ChatUI() {
+interface ChatUIProps {
+  sessionId: string;
+}
+
+export function ChatUI({ sessionId }: ChatUIProps) {
+  const touchWorkspaceRevision = useAppStore((state) => state.touchWorkspaceRevision);
   const [agent, setAgent] = useState<Agent | null>(null);
+  const [currentModel, setCurrentModel] = useState<Model<any> | null>(null);
+  const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel>("off");
   const [messages, setMessages] = useState<AgentMessage[]>([]);
   const [streamMessage, setStreamMessage] = useState<AgentMessage | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [input, setInput] = useState("");
-  const [artifactsList, setArtifactsList] = useState<Array<[string, { filename: string; content: string }]>>([]);
+  const [artifactsList, setArtifactsList] = useState<Artifact[]>([]);
   const [activeArtifact, setActiveArtifact] = useState<string | null>(null);
   const [showArtifactsPanel, setShowArtifactsPanel] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const artifactsStoreRef = useRef<ArtifactsStore | null>(null);
   const autoScrollRef = useRef(true);
+  const hydratedSessionRef = useRef<string | null>(null);
+  const isHydratingRef = useRef(false);
 
   const scrollToBottom = useCallback(() => {
     if (!autoScrollRef.current) return;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
+  const cloneStreamMessage = useCallback((message: AgentMessage | null) => {
+    if (!message) {
+      return null;
+    }
+    return JSON.parse(JSON.stringify(message)) as AgentMessage;
+  }, []);
+
+  const syncAgentState = useCallback((nextAgent: Agent, store?: ArtifactsStore | null) => {
+    setCurrentModel(nextAgent.state.model ?? null);
+    setThinkingLevel(nextAgent.state.thinkingLevel ?? "off");
+    setMessages(nextAgent.state.messages.slice());
+    setStreamMessage(cloneStreamMessage(nextAgent.state.streamMessage ?? null));
+    setIsStreaming(nextAgent.state.isStreaming);
+    (store ?? artifactsStoreRef.current)?.reconstructFromMessages(nextAgent.state.messages);
+  }, [cloneStreamMessage]);
+
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     initPi()
       .then(({ agent: a, artifactsStore: store }) => {
         setAgent(a);
-        setMessages(a.state.messages);
-        setStreamMessage(a.state.streamMessage ?? null);
-        setIsStreaming(a.state.isStreaming);
-        if (store) {
-          artifactsStoreRef.current = store;
-          store.reconstructFromMessages(a.state.messages);
-          setArtifactsList(store.getSnapshot().map(([k, v]) => [k, { filename: v.filename, content: v.content }]));
-          store.onChange = () => {
-            setArtifactsList(store.getSnapshot().map(([k, v]) => [k, { filename: v.filename, content: v.content }]));
-          };
-        }
+        artifactsStoreRef.current = store;
+        syncAgentState(a, store);
+        setArtifactsList(store.getSnapshot().map(([, artifact]) => artifact));
+        store.onChange = () => {
+          setArtifactsList(store.getSnapshot().map(([, artifact]) => artifact));
+        };
         unsubscribe = a.subscribe(() => {
-          setMessages(a.state.messages);
-          setStreamMessage(a.state.streamMessage ?? null);
-          setIsStreaming(a.state.isStreaming);
-          store?.reconstructFromMessages(a.state.messages);
+          syncAgentState(a, store);
         });
       })
       .catch(console.error);
@@ -60,16 +80,71 @@ export function ChatUI() {
         artifactsStoreRef.current = null;
       }
     };
-  }, []);
+  }, [syncAgentState]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, streamMessage, scrollToBottom]);
 
+  useEffect(() => {
+    if (!agent || hydratedSessionRef.current === sessionId) return;
+
+    let cancelled = false;
+
+    const hydrateSession = async () => {
+      try {
+        isHydratingRef.current = true;
+        const storage = getAppStorage();
+        const savedSession = storage
+          ? await storage.sessions.loadSession(sessionId)
+          : null;
+
+        if (cancelled) return;
+
+        agent.abort();
+        agent.reset();
+        agent.sessionId = sessionId;
+
+        if (savedSession) {
+          agent.setModel(savedSession.model);
+          agent.setThinkingLevel(savedSession.thinkingLevel);
+          agent.replaceMessages(savedSession.messages);
+        } else {
+          agent.replaceMessages([]);
+        }
+
+        hydratedSessionRef.current = sessionId;
+        syncAgentState(agent);
+      } catch (error) {
+        console.error("Failed to hydrate chat session:", error);
+      } finally {
+        isHydratingRef.current = false;
+      }
+    };
+
+    hydrateSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [agent, sessionId, syncAgentState]);
+
+  useEffect(() => {
+    if (artifactsList.length === 0) {
+      setActiveArtifact(null);
+      return;
+    }
+
+    if (!activeArtifact || !artifactsList.some((artifact) => artifact.filename === activeArtifact)) {
+      setActiveArtifact(artifactsList[artifactsList.length - 1]?.filename ?? null);
+    }
+  }, [activeArtifact, artifactsList]);
+
   const handleSend = useCallback(
     async (text: string) => {
       const t = text.trim();
       if (!t || !agent || isStreaming) return;
+      if (hydratedSessionRef.current !== sessionId) return;
       setInput("");
       autoScrollRef.current = true;
       try {
@@ -78,17 +153,43 @@ export function ChatUI() {
         console.error(err);
       }
     },
-    [agent, isStreaming]
+    [agent, isStreaming, sessionId]
   );
+
+  useEffect(() => {
+    if (!agent) return;
+    if (hydratedSessionRef.current !== sessionId) return;
+    if (isHydratingRef.current) return;
+    if (messages.length === 0) return;
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const storage = getAppStorage();
+        if (!storage) return;
+
+        const existingMetadata = await storage.sessions.getMetadata(sessionId);
+        const metadata = buildSessionMetadata(sessionId, agent.state, existingMetadata);
+        await storage.sessions.saveSession(sessionId, agent.state, metadata, metadata.title);
+        touchWorkspaceRevision();
+      } catch (error) {
+        console.error("Failed to persist chat session:", error);
+      }
+    }, 120);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [agent, messages, sessionId, touchWorkspaceRevision]);
 
   const handleModelSelect = useCallback(() => {
     const a = getAgent();
     if (!a?.state?.model) return;
     const dialog = createCustomModelSelector(a.state.model, (model) => {
       a.setModel(model);
+      syncAgentState(a);
     });
     document.body.appendChild(dialog);
-  }, []);
+  }, [syncAgentState]);
 
   const handleOpenArtifact = useCallback((filename: string) => {
     setActiveArtifact(filename);
@@ -143,10 +244,10 @@ export function ChatUI() {
   }
 
   const hasArtifacts = artifactsList.length > 0;
-  const selectedContent = activeArtifact
-    ? artifactsList.find(([k]) => k === activeArtifact)?.[1]?.content ?? ""
-    : artifactsList[0]?.[1]?.content ?? "";
-  const selectedFilename = activeArtifact ?? artifactsList[0]?.[0] ?? null;
+  const selectedArtifact = activeArtifact
+    ? artifactsList.find((artifact) => artifact.filename === activeArtifact) ?? null
+    : artifactsList[artifactsList.length - 1] ?? null;
+  const selectedFilename = selectedArtifact?.filename ?? null;
 
   return (
     <div className="relative flex h-full flex-1 min-w-0">
@@ -155,14 +256,12 @@ export function ChatUI() {
         className="flex h-full flex-col flex-1 min-w-0"
         style={{ minHeight: 0 }}
       >
-        {/* Header with model name (model selector is in MessageEditor) */}
-        <div className="flex shrink-0 items-center justify-between border-b border-sidebar px-4 py-2">
+        <div className="flex shrink-0 items-center justify-between border-b border-sidebar-soft px-4 py-3">
           <span className="text-sm text-sidebar-muted truncate">
-            {agent.state.model?.name ?? "No model"}
+            {currentModel?.name ?? "No model"}
           </span>
         </div>
 
-        {/* Message list + streaming */}
         <div
           ref={scrollContainerRef}
           className="flex-1 overflow-y-auto min-h-0"
@@ -174,7 +273,7 @@ export function ChatUI() {
             autoScrollRef.current = nearBottom;
           }}
         >
-          <div className="max-w-3xl mx-auto p-4 pb-0 flex flex-col gap-3">
+          <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-5 pb-2">
             {messages.length === 0 && !streamMessage && (
               <p className="py-8 text-center text-sm text-sidebar-muted">
                 Send a message to start.
@@ -201,16 +300,18 @@ export function ChatUI() {
           </div>
         </div>
 
-        {/* Input + stats */}
-        <div className="shrink-0 border-t border-sidebar">
+        <div className="shrink-0 border-t border-sidebar-soft bg-sidebar-panel">
           <div className="max-w-3xl mx-auto px-2 pt-2">
             <MessageEditor
               value={input}
               onChange={setInput}
               isStreaming={isStreaming}
-              currentModel={agent.state.model}
-              thinkingLevel={agent.state.thinkingLevel ?? "off"}
-              onThinkingChange={(level) => agent.setThinkingLevel(level)}
+              currentModel={currentModel ?? undefined}
+              thinkingLevel={thinkingLevel}
+              onThinkingChange={(level) => {
+                agent.setThinkingLevel(level);
+                syncAgentState(agent);
+              }}
               onSend={handleSend}
               onAbort={() => agent.abort()}
               onModelSelect={handleModelSelect}
@@ -231,57 +332,60 @@ export function ChatUI() {
       {hasArtifacts && (
         <div
           className={cn(
-            "flex flex-col border-l border-sidebar bg-sidebar/50 min-h-0",
-            showArtifactsPanel ? "w-80 shrink-0" : "w-0 overflow-hidden"
+            "min-h-0 border-l border-sidebar-soft bg-sidebar-panel backdrop-blur-sm",
+            showArtifactsPanel ? "flex w-[min(44rem,48vw)] shrink-0 flex-col" : "hidden"
           )}
           style={{ minHeight: 0 }}
         >
-          {showArtifactsPanel && (
-            <>
-              <div className="shrink-0 flex items-center justify-between px-2 py-2 border-b border-sidebar">
-                <span className="text-sm font-medium text-sidebar">Artifacts</span>
-                <button
-                  type="button"
-                  onClick={() => setShowArtifactsPanel(false)}
-                  className="text-sidebar-muted hover:text-sidebar p-1 rounded"
-                  aria-label="Close artifacts"
-                >
-                  ×
-                </button>
+          <div className="flex shrink-0 items-center justify-between border-b border-sidebar-soft px-4 py-3">
+            <div>
+              <div className="text-sm font-medium text-sidebar">Artifacts</div>
+              <div className="mt-1 text-xs text-sidebar-muted">
+                Sandbox preview for HTML, styled preview for Markdown.
               </div>
-              <div className="shrink-0 flex overflow-x-auto gap-1 p-2 border-b border-sidebar">
-                {artifactsList.map(([filename]) => (
-                  <button
-                    key={filename}
-                    type="button"
-                    onClick={() => setActiveArtifact(filename)}
-                    className={cn(
-                      "shrink-0 rounded px-2 py-1 text-xs font-mono whitespace-nowrap border",
-                      selectedFilename === filename
-                        ? "border-emerald-500 bg-emerald-500/20 text-sidebar"
-                        : "border-sidebar bg-sidebar-hover text-sidebar-muted hover:text-sidebar"
-                    )}
-                  >
-                    {filename}
-                  </button>
-                ))}
-              </div>
-              <div className="flex-1 overflow-auto p-3 min-h-0">
-                <pre className="text-xs text-sidebar whitespace-pre-wrap wrap-break-word font-mono bg-sidebar-hover/50 rounded p-3 min-h-0">
-                  {selectedContent}
-                </pre>
-              </div>
-            </>
-          )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowArtifactsPanel(false)}
+              className="rounded-full p-2 text-sidebar-muted transition-colors hover:bg-sidebar-panel-strong hover:text-sidebar"
+              aria-label="Close artifacts"
+            >
+              ×
+            </button>
+          </div>
+          <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-sidebar-soft px-4 py-3">
+            {artifactsList.map((artifact) => (
+              <button
+                key={artifact.filename}
+                type="button"
+                onClick={() => setActiveArtifact(artifact.filename)}
+                className={cn(
+                  "shrink-0 rounded-full border px-3 py-1.5 text-xs font-mono whitespace-nowrap transition-colors",
+                  selectedFilename === artifact.filename
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-sidebar"
+                    : "border-sidebar-soft bg-sidebar-panel text-sidebar-muted hover:bg-sidebar-panel-strong hover:text-sidebar"
+                )}
+              >
+                {artifact.filename}
+              </button>
+            ))}
+          </div>
+          <div className="flex-1 min-h-0 overflow-hidden">
+            {selectedArtifact ? (
+              <ArtifactPreview
+                filename={selectedArtifact.filename}
+                content={selectedArtifact.content}
+              />
+            ) : null}
+          </div>
         </div>
       )}
 
-      {/* Floating pill to show artifacts when panel is closed */}
       {hasArtifacts && !showArtifactsPanel && (
         <button
           type="button"
           onClick={() => setShowArtifactsPanel(true)}
-          className="absolute left-1/2 top-4 z-30 -translate-x-1/2 rounded-full border border-sidebar bg-sidebar px-3 py-1.5 text-xs text-sidebar shadow-lg hover:bg-sidebar-hover"
+          className="absolute left-1/2 top-4 z-30 -translate-x-1/2 rounded-full border border-sidebar-soft bg-sidebar-panel px-3 py-1.5 text-xs text-sidebar shadow-lg transition-colors hover:bg-sidebar-panel-strong"
           title="Show artifacts"
         >
           Artifacts ({artifactsList.length})

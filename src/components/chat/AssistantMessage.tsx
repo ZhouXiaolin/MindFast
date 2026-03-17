@@ -1,10 +1,10 @@
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import type { AssistantMessage as AssistantMessageType, ToolResultMessage } from "@mariozechner/pi-ai";
-import ReactMarkdown from "react-markdown";
 import { formatUsage } from "../../lib/format";
 import { cn } from "../../lib/cn";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolMessage } from "./ToolMessage";
+import { MarkdownContent } from "./MarkdownContent";
 
 interface AssistantMessageProps {
   message: AssistantMessageType;
@@ -34,9 +34,7 @@ export function AssistantMessage({
     if (chunk.type === "text" && (chunk as { text?: string }).text?.trim()) {
       const text = (chunk as { text: string }).text;
       parts.push(
-        <div key={parts.length} className="prose prose-sm dark:prose-invert max-w-none wrap-break-word text-sidebar">
-          <ReactMarkdown>{text}</ReactMarkdown>
-        </div>
+        <MarkdownContent key={parts.length} content={text} />
       );
     } else if (chunk.type === "thinking" && (chunk as { thinking?: string }).thinking?.trim()) {
       const thinking = (chunk as { thinking: string }).thinking;
@@ -77,7 +75,7 @@ export function AssistantMessage({
         <div
           className={cn(
             "text-xs text-sidebar-muted",
-            onCostClick && "cursor-pointer hover:text-sidebar transition-colors"
+            onCostClick && "cursor-pointer transition-colors hover:text-sidebar"
           )}
           onClick={onCostClick}
           onKeyDown={(e) => onCostClick && e.key === "Enter" && onCostClick()}

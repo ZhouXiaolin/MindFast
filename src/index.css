@@ -14,8 +14,11 @@
     --sidebar-bg: #3f3f46;
     --sidebar-fg: #fafafa;
     --sidebar-muted: #a1a1aa;
-    --sidebar-border: rgba(255, 255, 255, 0.08);
+    --sidebar-border: rgba(255, 255, 255, 0.05);
+    --sidebar-soft: rgba(255, 255, 255, 0.035);
     --sidebar-hover: #27272a;
+    --sidebar-panel: rgba(255, 255, 255, 0.035);
+    --sidebar-panel-strong: rgba(255, 255, 255, 0.06);
   }
   /* Light theme — 以侧边栏为准 */
   [data-theme="light"] {
@@ -23,12 +26,16 @@
     --sidebar-bg: #eae9e4;
     --sidebar-fg: #141413;
     --sidebar-muted: #73726c;
-    --sidebar-border: rgba(0, 0, 0, 0.06);
+    --sidebar-border: rgba(0, 0, 0, 0.055);
+    --sidebar-soft: rgba(0, 0, 0, 0.035);
     --sidebar-hover: #dddcd6;
+    --sidebar-panel: rgba(255, 255, 255, 0.45);
+    --sidebar-panel-strong: rgba(255, 255, 255, 0.75);
   }
   body {
     background-color: var(--app-bg);
     color: var(--sidebar-fg);
+    -webkit-font-smoothing: antialiased;
   }
 }
 
@@ -40,11 +47,15 @@
   .text-sidebar { color: var(--sidebar-fg); }
   .text-sidebar-muted { color: var(--sidebar-muted); }
   .border-sidebar { border-color: var(--sidebar-border); }
+  .border-sidebar-soft { border-color: var(--sidebar-soft); }
   .bg-sidebar-hover { background-color: var(--sidebar-hover); }
+  .bg-sidebar-panel { background-color: var(--sidebar-panel); }
+  .bg-sidebar-panel-strong { background-color: var(--sidebar-panel-strong); }
   .hover\:bg-sidebar-hover:hover { background-color: var(--sidebar-hover); }
   .hover\:text-sidebar:hover { color: var(--sidebar-fg); }
   .border-app { border-color: var(--sidebar-border); }
   .bg-sidebar-border { background-color: var(--sidebar-border); }
+  .bg-sidebar-soft { background-color: var(--sidebar-soft); }
 }
 
 /* Settings 与侧边栏统一：使用同一套 sidebar 变量 */
@@ -55,8 +66,37 @@
 
 /* Provider 页分割线 */
 .settings-provider-divider {
-  border-right: 1px solid var(--sidebar-border);
+  border-right: 1px solid var(--sidebar-soft);
 }
 .settings-provider-divider-t {
-  border-top: 1px solid var(--sidebar-border);
+  border-top: 1px solid var(--sidebar-soft);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sidebar-border) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--sidebar-border);
+  border-radius: 999px;
+}
+
+.user-message-container {
+  position: relative;
+  background:
+    linear-gradient(135deg, rgba(16, 185, 129, 0.13), rgba(20, 184, 166, 0.08)),
+    var(--sidebar-panel);
+  border: 1px solid var(--sidebar-soft);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(16px);
 }

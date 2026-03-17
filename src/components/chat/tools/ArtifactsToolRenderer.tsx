@@ -165,7 +165,7 @@ export function renderArtifactsTool(
         content: (
           <div>
             <ToolHeader state={state} label={headerText} filename={filename} onOpenArtifact={onOpenArtifact} defaultOpen>
-              <pre className="overflow-x-auto rounded border border-sidebar bg-sidebar-hover/50 px-3 py-2 text-xs font-mono text-sidebar whitespace-pre-wrap">
+              <pre className="overflow-x-auto rounded-2xl border border-sidebar-soft bg-sidebar-panel px-3 py-3 text-xs font-mono text-sidebar whitespace-pre-wrap">
                 {output || "(no output)"}
               </pre>
             </ToolHeader>
@@ -185,7 +185,7 @@ export function renderArtifactsTool(
               <div className="space-y-2">
                 {content ? <CodeBlock code={content} language={getLanguageFromFilename(filename)} /> : null}
                 {isHtml && logs ? (
-                  <pre className="overflow-x-auto rounded border border-sidebar bg-sidebar-hover/50 px-3 py-2 text-xs font-mono text-sidebar whitespace-pre-wrap">
+                  <pre className="overflow-x-auto rounded-2xl border border-sidebar-soft bg-sidebar-panel px-3 py-3 text-xs font-mono text-sidebar whitespace-pre-wrap">
                     {logs}
                   </pre>
                 ) : null}
@@ -208,7 +208,7 @@ export function renderArtifactsTool(
               <div className="space-y-2">
                 <CodeBlock code={`- ${oldStr}\n+ ${newStr}`} language="text" />
                 {isHtml && logs ? (
-                  <pre className="overflow-x-auto rounded border border-sidebar bg-sidebar-hover/50 px-3 py-2 text-xs font-mono text-sidebar whitespace-pre-wrap">
+                  <pre className="overflow-x-auto rounded-2xl border border-sidebar-soft bg-sidebar-panel px-3 py-3 text-xs font-mono text-sidebar whitespace-pre-wrap">
                     {logs}
                   </pre>
                 ) : null}

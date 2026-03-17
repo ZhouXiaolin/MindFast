@@ -1,8 +1,8 @@
 import { useState } from "react";
 import * as Collapsible from "@radix-ui/react-collapsible";
 import { ChevronRight } from "lucide-react";
-import ReactMarkdown from "react-markdown";
 import { cn } from "../../lib/cn";
+import { MarkdownContent } from "./MarkdownContent";
 
 interface ThinkingBlockProps {
   content: string;
@@ -36,9 +36,7 @@ export function ThinkingBlock({ content, isStreaming = false }: ThinkingBlockPro
         </Collapsible.Trigger>
         <Collapsible.Content>
           {open && content.trim() ? (
-            <div className="prose prose-sm dark:prose-invert mt-2 max-w-none break-words text-sidebar-muted">
-              <ReactMarkdown>{content}</ReactMarkdown>
-            </div>
+            <MarkdownContent content={content} tone="muted" className="mt-2" />
           ) : null}
         </Collapsible.Content>
       </Collapsible.Root>

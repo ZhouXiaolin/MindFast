@@ -14,6 +14,8 @@ interface AppState {
   setUserName: (name: string) => void;
   userEmail: string;
   setUserEmail: (email: string) => void;
+  workspaceRevision: number;
+  touchWorkspaceRevision: () => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -27,4 +29,7 @@ export const useAppStore = create<AppState>((set) => ({
   setUserName: (userName) => set({ userName }),
   userEmail: "user@example.com",
   setUserEmail: (userEmail) => set({ userEmail }),
+  workspaceRevision: 0,
+  touchWorkspaceRevision: () =>
+    set((state) => ({ workspaceRevision: state.workspaceRevision + 1 })),
 }));

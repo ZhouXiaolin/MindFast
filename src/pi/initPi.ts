@@ -21,6 +21,11 @@ import { createArtifactsTool } from "./artifacts/tool";
 
 const DB_NAME = "mindfast-pi";
 const DB_VERSION = 2;
+const DEFAULT_SYSTEM_PROMPT = `You are a helpful assistant.
+
+Answer directly in chat by default.
+Use the artifacts tool only when the user explicitly asks you to create, save, update, or manage a file, or when the output is clearly a persistent deliverable such as markdown, html, json, csv, svg, or code the user should keep.
+Do not create artifacts for greetings, simple questions, short explanations, brainstorming, or normal conversational replies.`;
 
 let storage: ExtendedAppStorage | null = null;
 let agent: Agent | null = null;
@@ -180,7 +185,7 @@ export async function initPi(): Promise<{
 
     agent = new Agent({
       initialState: {
-        systemPrompt: "You are a helpful assistant.",
+        systemPrompt: DEFAULT_SYSTEM_PROMPT,
         model: defaultModel,
         thinkingLevel: "off",
         messages: [],

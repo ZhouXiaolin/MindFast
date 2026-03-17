@@ -6,9 +6,9 @@ export const ARTIFACTS_TOOL_DESCRIPTION = `# Artifacts
 Create and manage persistent files that live alongside the conversation.
 
 ## When to Use
-- Writing research summaries, analysis, ideas, documentation
-- Creating markdown notes for the user to read
-- Building HTML applications/visualizations that present data
+- Use this tool only when the user needs a persistent file or explicitly asks to create, save, update, or manage one.
+- Good fits: markdown notes, documentation, html apps, json/csv data files, svg/code files the user should keep.
+- Prefer a normal chat response for greetings, simple Q&A, short explanations, brainstorming, and ordinary conversation.
 
 ## Commands
 - create: Create new file. Requires filename and content.
