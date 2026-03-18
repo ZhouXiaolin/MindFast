@@ -12,13 +12,13 @@ import { EnabledProvidersStore, ModelsStore, EnabledModelsStore } from "./provid
 const DB_NAME = "mindfast-pi";
 const DB_VERSION = 2;
 
-let storageInstance: AppStorage | null = null;
-let initPromise: Promise<AppStorage> | null = null;
+let storageInstance: ExtendedAppStorage | null = null;
+let initPromise: Promise<ExtendedAppStorage> | null = null;
 
 /**
  * Initialize storage backend and all stores
  */
-export async function initStorage(): Promise<AppStorage> {
+export async function initStorage(): Promise<ExtendedAppStorage> {
   if (storageInstance) {
     return storageInstance;
   }

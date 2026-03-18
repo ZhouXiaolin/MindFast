@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { initPi, getAppStorage } from "../init";
+import { initApp, getAppStorage } from "../init";
 import type { CustomProvider, AutoDiscoveryProviderType } from "../stores/storage";
 import { getModels } from "@mariozechner/pi-ai";
 import {
@@ -54,7 +54,7 @@ export function SettingsProvider() {
   }>>({});
 
   const loadStorage = useCallback(async () => {
-    await initPi();
+    await initApp();
     const storage = getAppStorage();
     if (!storage) return null;
     const custom = await storage.customProviders.getAll();

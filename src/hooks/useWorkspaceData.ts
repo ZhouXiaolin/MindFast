@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { SessionMetadata } from "../stores/storage";
-import { getAppStorage, initPi } from "../init";
+import { getAppStorage, initApp } from "../init";
 import { useAppStore } from "../stores/app";
 import {
   extractArtifactsFromMessages,
@@ -18,7 +18,7 @@ export function useSessionMetadataList() {
     const load = async () => {
       setLoading(true);
       try {
-        await initPi();
+        await initApp();
         const storage = getAppStorage();
         if (!storage) return;
 
@@ -59,7 +59,7 @@ export function useSavedArtifacts() {
     const load = async () => {
       setLoading(true);
       try {
-        await initPi();
+        await initApp();
         const storage = getAppStorage();
         if (!storage) return;
 

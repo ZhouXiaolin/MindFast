@@ -3,7 +3,7 @@ import type { Agent, AgentMessage, ThinkingLevel } from "@mariozechner/pi-agent-
 import type { Model, ToolResultMessage } from "@mariozechner/pi-ai";
 import { Check, ChevronDown, Sparkles } from "lucide-react";
 import type { ArtifactsStore } from "../ai/artifacts/store";
-import { initPi, getAppStorage, getEnabledModels, getModelForProvider } from "../init";
+import { initApp, getAppStorage, getEnabledModels, getModelForProvider } from "../init";
 import { formatUsage, type Usage } from "../utils/format";
 import { MessageList } from "./chat/MessageList";
 import { StreamingMessageContainer } from "./chat/StreamingMessageContainer";
@@ -73,7 +73,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
 
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
-    initPi()
+    initApp()
       .then(({ agent: a, artifactsStore: store }) => {
         setAgent(a);
         artifactsStoreRef.current = store;
