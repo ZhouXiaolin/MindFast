@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import type { Artifact } from "../../ai/artifacts/types";
 
 interface UseArtifactsPanelResult {
@@ -17,16 +17,12 @@ export function useArtifactsPanel(artifactsList: Artifact[]): UseArtifactsPanelR
   const [activeArtifact, setActiveArtifact] = useState<string | null>(null);
   const [showArtifactsPanel, setShowArtifactsPanel] = useState(true);
 
-  useEffect(() => {
-    if (artifactsList.length === 0) {
-      setActiveArtifact(null);
-      return;
-    }
-
-    if (!activeArtifact || !artifactsList.some((artifact) => artifact.filename === activeArtifact)) {
-      setActiveArtifact(artifactsList[artifactsList.length - 1]?.filename ?? null);
-    }
-  }, [activeArtifact, artifactsList]);
+  const fallbackArtifact = artifactsList[artifactsList.length - 1] ?? null;
+  const activeArtifactExists = !!activeArtifact &&
+    artifactsList.some((artifact) => artifact.filename === activeArtifact);
+  const selectedFilename = activeArtifactExists
+    ? activeArtifact
+    : fallbackArtifact?.filename ?? null;
 
   const openArtifact = useCallback((filename: string) => {
     setActiveArtifact(filename);
@@ -45,18 +41,18 @@ export function useArtifactsPanel(artifactsList: Artifact[]): UseArtifactsPanelR
     setShowArtifactsPanel(false);
   }, []);
 
-  const selectedArtifact = activeArtifact
-    ? artifactsList.find((artifact) => artifact.filename === activeArtifact) ?? null
-    : artifactsList[artifactsList.length - 1] ?? null;
+  const selectedArtifact = selectedFilename
+    ? artifactsList.find((artifact) => artifact.filename === selectedFilename) ?? null
+    : null;
 
   return {
-    activeArtifact,
+    activeArtifact: selectedFilename,
     closePanel,
     hasArtifacts: artifactsList.length > 0,
     openArtifact,
     openPanel,
     selectedArtifact,
-    selectedFilename: selectedArtifact?.filename ?? null,
+    selectedFilename,
     selectArtifact,
     showArtifactsPanel,
   };

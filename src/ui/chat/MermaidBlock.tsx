@@ -19,6 +19,33 @@ function loadMermaid(): Promise<MermaidModule> {
   return mermaidModulePromise;
 }
 
+function expandCompoundEdges(chart: string): string {
+  const lines = chart.split("\n");
+  const expanded: string[] = [];
+
+  // Expand unsupported shorthand like: A & B --> C  into  A --> C / B --> C
+  for (const line of lines) {
+    const match = line.match(/^(\s*)([\w-]+(?:\s*&\s*[\w-]+)+)\s*-->\s*(.+)$/);
+    if (!match) {
+      expanded.push(line);
+      continue;
+    }
+
+    const [, indent, sourceGroup, target] = match;
+    const sources = sourceGroup.split("&").map((source) => source.trim()).filter(Boolean);
+    if (sources.length < 2) {
+      expanded.push(line);
+      continue;
+    }
+
+    for (const source of sources) {
+      expanded.push(`${indent}${source} --> ${target}`);
+    }
+  }
+
+  return expanded.join("\n");
+}
+
 export function MermaidBlock({ chart, className }: MermaidBlockProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const diagramIdRef = useRef(`mermaid-${Math.random().toString(36).slice(2, 10)}`);
@@ -41,14 +68,17 @@ export function MermaidBlock({ chart, className }: MermaidBlockProps) {
         container.innerHTML = "";
         setError(null);
 
+        const normalizedChart = expandCompoundEdges(chart);
+
         mermaid.initialize({
           startOnLoad: false,
           securityLevel: "strict",
           suppressErrorRendering: true,
           theme: resolvedTheme === "dark" ? "dark" : "default",
+          flowchart: { htmlLabels: true },
         });
 
-        const { svg, bindFunctions } = await mermaid.render(diagramIdRef.current, chart);
+        const { svg, bindFunctions } = await mermaid.render(diagramIdRef.current, normalizedChart);
 
         if (!container || cancelled) {
           return;
@@ -59,7 +89,9 @@ export function MermaidBlock({ chart, className }: MermaidBlockProps) {
       } catch (renderError) {
         console.error("Failed to render Mermaid diagram:", renderError);
         if (!cancelled) {
-          setError("Failed to render Mermaid diagram.");
+          const message =
+            renderError instanceof Error ? renderError.message : "Failed to render Mermaid diagram.";
+          setError(message);
         }
       }
     };

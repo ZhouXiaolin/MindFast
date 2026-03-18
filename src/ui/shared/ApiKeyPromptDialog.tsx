@@ -20,19 +20,37 @@ export function ApiKeyPromptDialog({
 
   useEffect(() => {
     if (!open) return;
+    let cancelled = false;
     setKey("");
-    const interval = setInterval(async () => {
+
+    const poll = async () => {
+      if (cancelled) return;
       setChecking(true);
-      const storage = await getInitializedAppStorage();
-      const existing = await storage.providerKeys.get(provider);
-      setChecking(false);
-      if (existing) {
-        onResolve(true);
-        onOpenChange(false);
-        clearInterval(interval);
+      try {
+        const storage = await getInitializedAppStorage();
+        const existing = await storage.providerKeys.get(provider);
+        if (existing) {
+          onResolve(true);
+          onOpenChange(false);
+          return;
+        }
+      } finally {
+        if (!cancelled) {
+          setChecking(false);
+        }
       }
-    }, 500);
-    return () => clearInterval(interval);
+
+      if (!cancelled) {
+        window.setTimeout(() => {
+          void poll();
+        }, 500);
+      }
+    };
+
+    void poll();
+    return () => {
+      cancelled = true;
+    };
   }, [open, provider, onResolve, onOpenChange]);
 
   const handleSave = async () => {
