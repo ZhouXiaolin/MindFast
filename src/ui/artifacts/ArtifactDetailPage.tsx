@@ -2,7 +2,7 @@ import { ChevronLeft } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ArtifactPreview } from "./ArtifactPreview";
-import { useSavedArtifacts } from "../../hooks/useWorkspaceData";
+import { useSavedArtifacts } from "../hooks/useWorkspaceData";
 
 export function ArtifactDetailPage() {
   const { t } = useTranslation();

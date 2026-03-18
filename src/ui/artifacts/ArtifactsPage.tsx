@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Box, FileCode2, FileText, Globe } from "lucide-react";
-import { useSavedArtifacts } from "../../hooks/useWorkspaceData";
+import { useSavedArtifacts } from "../hooks/useWorkspaceData";
 import { MarkdownContent } from "../chat/MarkdownContent";
 import { SandboxedIframe } from "./SandboxedIframe";
 import type { SavedArtifactSummary } from "../../utils/workspace";

@@ -4,7 +4,7 @@ import { useAppStore } from "../../stores/app";
 import {
   type Base46Theme,
   getBase46ThemesByType,
-} from "../../themes/base46";
+} from "../themes/base46";
 
 function PresetCard({
   theme,

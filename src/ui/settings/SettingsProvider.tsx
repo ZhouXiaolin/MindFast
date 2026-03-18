@@ -7,7 +7,7 @@ import { getModels } from "@mariozechner/pi-ai";
 import {
   COMMON_PROVIDERS,
   isCommonProvider,
-} from "../../config/commonProviders";
+} from "../config/providers";
 import {
   isKnownProvider,
   getCustomProviderModels,

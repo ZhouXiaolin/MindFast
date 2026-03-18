@@ -2,9 +2,9 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { initApp, getAppStorage } from "../../init";
 import { setApiKeyPromptHandler } from "../../ai/api-key-prompt";
-import { NoModelConfigured } from "../../components/NoModelConfigured";
+import { NoModelConfigured } from "../shared/NoModelConfigured";
 import { ChatUI } from "./ChatUI";
-import { ApiKeyPromptDialog } from "../../components/ApiKeyPromptDialog";
+import { ApiKeyPromptDialog } from "../shared/ApiKeyPromptDialog";
 
 export function ChatView() {
   const { id: sessionId } = useParams<{ id: string }>();
