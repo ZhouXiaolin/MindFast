@@ -5,7 +5,7 @@ import { useAppStore } from "../stores/app";
 import {
   extractArtifactsFromMessages,
   type SavedArtifactSummary,
-} from "../utils/workspace";
+} from "../ai/artifacts/extract";
 
 export function useSessionMetadataList() {
   const workspaceRevision = useAppStore((state) => state.workspaceRevision);
