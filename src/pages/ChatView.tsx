@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { initPi, getAppStorage } from "../pi/initPi";
-import { setApiKeyPromptHandler } from "../pi/apiKeyPrompt";
+import { initPi, getAppStorage } from "../init";
+import { setApiKeyPromptHandler } from "../ai/api-key-prompt";
 import { NoModelConfigured } from "../components/NoModelConfigured";
 import { ChatUI } from "../components/ChatUI";
 import { ApiKeyPromptDialog } from "../components/ApiKeyPromptDialog";

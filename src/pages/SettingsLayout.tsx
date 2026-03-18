@@ -1,7 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { SlidersHorizontal, Server, Palette } from "lucide-react";
-import { cn } from "../lib/cn";
+import { cn } from "../utils/cn";
 
 const SETTINGS_LINKS = [
   { path: "general", labelKey: "settingsGeneral", icon: SlidersHorizontal },

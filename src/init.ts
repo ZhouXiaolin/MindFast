@@ -1,4 +1,5 @@
 export {
+  initPi,
   initPi as initApp,
   getAppStorage,
   getArtifactsStore,

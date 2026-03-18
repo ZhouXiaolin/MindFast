@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { MessageSquarePlus, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSessionMetadataList } from "../hooks/useWorkspaceData";
-import { cn } from "../lib/cn";
-import { createSessionId } from "../lib/workspace";
+import { cn } from "../utils/cn";
+import { createSessionId } from "../utils/workspace";
 
 interface ChatsPageProps {
   autoFocusSearch?: boolean;

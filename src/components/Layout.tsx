@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { NavLink } from "react-router-dom";
-import { cn } from "../lib/cn";
+import { cn } from "../utils/cn";
 import { useTranslation } from "react-i18next";
-import { useAppStore } from "../stores/appStore";
+import { useAppStore } from "../stores/app";
 import { useSessionMetadataList } from "../hooks/useWorkspaceData";
-import { createSessionId } from "../lib/workspace";
+import { createSessionId } from "../utils/workspace";
 import { useResolvedTheme } from "../contexts/ThemeProvider";
 import {
   MessageSquarePlus,

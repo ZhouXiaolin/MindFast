@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { initPi, getAppStorage } from "../pi/initPi";
-import type { CustomProvider, AutoDiscoveryProviderType } from "../pi/storage";
+import { initPi, getAppStorage } from "../init";
+import type { CustomProvider, AutoDiscoveryProviderType } from "../stores/storage";
 import { getModels } from "@mariozechner/pi-ai";
 import {
   COMMON_PROVIDERS,
@@ -11,9 +11,9 @@ import {
 import {
   isKnownProvider,
   getCustomProviderModels,
-} from "../config/commonProviderModels";
+} from "../ai/providers";
 import { AddCustomProviderModal, type AddCustomProviderForm } from "../components/AddCustomProviderModal";
-import { cn } from "../lib/cn";
+import { cn } from "../utils/cn";
 
 export type ProviderListItem =
   | { id: string; name: string; common: true; config: (typeof COMMON_PROVIDERS)[number] }

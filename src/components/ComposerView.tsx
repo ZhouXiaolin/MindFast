@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as Tabs from "@radix-ui/react-tabs";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { cn } from "../lib/cn";
+import { cn } from "../utils/cn";
 import { useAppStore } from "../stores/appStore";
 import {
   Send,

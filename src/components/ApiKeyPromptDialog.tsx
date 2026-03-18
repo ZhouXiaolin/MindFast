@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { getAppStorage } from "../pi/initPi";
+import { getAppStorage } from "../init";
 
 interface ApiKeyPromptDialogProps {
   provider: string;

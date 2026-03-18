@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import type { SessionMetadata } from "../pi/storage/types";
-import { getAppStorage, initPi } from "../pi/initPi";
-import { useAppStore } from "../stores/appStore";
+import type { SessionMetadata } from "../stores/storage";
+import { getAppStorage, initPi } from "../init";
+import { useAppStore } from "../stores/app";
 import {
   extractArtifactsFromMessages,
   type SavedArtifactSummary,
-} from "../lib/workspace";
+} from "../utils/workspace";
 
 export function useSessionMetadataList() {
   const workspaceRevision = useAppStore((state) => state.workspaceRevision);

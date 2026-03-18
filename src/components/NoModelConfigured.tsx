@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Settings, ArrowRight } from "lucide-react";
-import { cn } from "../lib/cn";
+import { cn } from "../utils/cn";
 
 export function NoModelConfigured() {
   const { t } = useTranslation();

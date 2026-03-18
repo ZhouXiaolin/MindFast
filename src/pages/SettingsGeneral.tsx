@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
-import { useAppStore } from "../stores/appStore";
-import { cn } from "../lib/cn";
-import type { ColorMode, ChatFont } from "../stores/appStore";
+import { useAppStore } from "../stores/app";
+import { cn } from "../utils/cn";
+import type { ColorMode, ChatFont } from "../stores/app";
 
 const sectionBorder = "border-b border-sidebar pb-8 mb-8 last:mb-0 last:border-b-0 last:pb-0";
 const heading2Class = "text-xs font-normal mb-4 text-sidebar-muted";

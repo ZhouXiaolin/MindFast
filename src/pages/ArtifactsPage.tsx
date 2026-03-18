@@ -4,7 +4,7 @@ import { Box, FileCode2, FileText, Globe } from "lucide-react";
 import { useSavedArtifacts } from "../hooks/useWorkspaceData";
 import { MarkdownContent } from "../components/chat/MarkdownContent";
 import { SandboxedIframe } from "../components/artifacts/SandboxedIframe";
-import type { SavedArtifactSummary } from "../lib/workspace";
+import type { SavedArtifactSummary } from "../utils/workspace";
 
 function ArtifactCardPreview({ artifact }: { artifact: SavedArtifactSummary }) {
   if (artifact.kind === "html") {

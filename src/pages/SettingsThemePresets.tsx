@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { cn } from "../lib/cn";
-import { useAppStore } from "../stores/appStore";
+import { cn } from "../utils/cn";
+import { useAppStore } from "../stores/app";
 import {
   type Base46Theme,
   getBase46ThemesByType,

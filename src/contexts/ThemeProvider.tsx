@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { useAppStore } from "../stores/appStore";
+import { useAppStore } from "../stores/app";
 import {
   getBase46ThemeById,
   base30ToCssVars,

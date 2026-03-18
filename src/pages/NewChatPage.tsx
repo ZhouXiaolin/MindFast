@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { createSessionId } from "../lib/workspace";
+import { createSessionId } from "../utils/workspace";
 
 export function NewChatPage() {
   const navigate = useNavigate();

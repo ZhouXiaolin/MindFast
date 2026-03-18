@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as Dialog from "@radix-ui/react-dialog";
-import { cn } from "../lib/cn";
+import { cn } from "../utils/cn";
 
 export type ApiFormat = "openai-completions" | "anthropic-messages";
 

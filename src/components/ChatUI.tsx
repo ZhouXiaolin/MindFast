@@ -2,23 +2,23 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import type { Agent, AgentMessage, ThinkingLevel } from "@mariozechner/pi-agent-core";
 import type { Model, ToolResultMessage } from "@mariozechner/pi-ai";
 import { Check, ChevronDown, Sparkles } from "lucide-react";
-import type { ArtifactsStore } from "../pi/artifacts/store";
-import { initPi, getAppStorage, getEnabledModels, getModelForProvider } from "../pi/initPi";
-import { formatUsage, type Usage } from "../lib/format";
+import type { ArtifactsStore } from "../ai/artifacts/store";
+import { initPi, getAppStorage, getEnabledModels, getModelForProvider } from "../init";
+import { formatUsage, type Usage } from "../utils/format";
 import { MessageList } from "./chat/MessageList";
 import { StreamingMessageContainer } from "./chat/StreamingMessageContainer";
 import { MessageEditor } from "./chat/MessageEditor";
-import { cn } from "../lib/cn";
+import { cn } from "../utils/cn";
 import { ArtifactPreview } from "./artifacts/ArtifactPreview";
-import type { Artifact } from "../pi/artifacts/types";
-import { buildSessionMetadata } from "../lib/workspace";
-import { useAppStore } from "../stores/appStore";
+import type { Artifact } from "../ai/artifacts/types";
+import { buildSessionMetadata } from "../utils/workspace";
+import { useAppStore } from "../stores/app";
 
 interface ChatUIProps {
   sessionId: string;
 }
 
-const CHAT_FONT_CLASS: Record<import("../stores/appStore").ChatFont, string> = {
+const CHAT_FONT_CLASS: Record<import("../stores/app").ChatFont, string> = {
   default: "font-chat-default",
   sans: "font-chat-sans",
   system: "font-chat-system",
