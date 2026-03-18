@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { RouterProvider } from "react-router-dom";
-import { useAppStore } from "./stores/appStore";
+import { useAppStore } from "./stores/app";
 import { router } from "./routes";
 
 function AppInner() {
