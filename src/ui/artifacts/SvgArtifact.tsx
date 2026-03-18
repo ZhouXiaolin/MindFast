@@ -1,0 +1,36 @@
+import { useState } from "react";
+import { Code2, Eye, Copy, Download } from "lucide-react";
+import { cn } from "../../utils/cn";
+import { CodeBlock } from "../chat/CodeBlock";
+import type { ArtifactRendererProps } from "./types";
+import { downloadBlob } from "./base64-utils";
+
+export function SvgArtifact({ filename, content }: ArtifactRendererProps) {
+  const [viewMode, setViewMode] = useState<"preview" | "code">("preview");
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between border-b border-sidebar-soft px-3 py-2">
+        <div className="flex items-center gap-1">
+          <button type="button" onClick={() => setViewMode("preview")} className={cn("rounded-md px-2 py-1 text-xs", viewMode === "preview" ? "bg-sidebar-panel-strong text-sidebar" : "text-sidebar-muted hover:text-sidebar")}>
+            <Eye className="mr-1 inline h-3 w-3" />Preview
+          </button>
+          <button type="button" onClick={() => setViewMode("code")} className={cn("rounded-md px-2 py-1 text-xs", viewMode === "code" ? "bg-sidebar-panel-strong text-sidebar" : "text-sidebar-muted hover:text-sidebar")}>
+            <Code2 className="mr-1 inline h-3 w-3" />Code
+          </button>
+        </div>
+        <div className="flex items-center gap-1">
+          <button type="button" onClick={() => navigator.clipboard.writeText(content)} className="rounded-md p-1 text-sidebar-muted hover:text-sidebar" title="Copy SVG"><Copy className="h-3.5 w-3.5" /></button>
+          <button type="button" onClick={() => downloadBlob(content, filename, "image/svg+xml")} className="rounded-md p-1 text-sidebar-muted hover:text-sidebar" title="Download"><Download className="h-3.5 w-3.5" /></button>
+        </div>
+      </div>
+      <div className="flex-1 min-h-0 overflow-auto">
+        {viewMode === "preview" ? (
+          <div className="flex h-full items-center justify-center p-4" dangerouslySetInnerHTML={{ __html: content }} />
+        ) : (
+          <CodeBlock code={content} language="xml" className="h-full min-h-full rounded-none border-0" />
+        )}
+      </div>
+    </div>
+  );
+}

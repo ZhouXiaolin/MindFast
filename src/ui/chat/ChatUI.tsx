@@ -9,7 +9,7 @@ import { MessageList } from "./MessageList";
 import { StreamingMessageContainer } from "./StreamingMessageContainer";
 import { MessageEditor } from "./MessageEditor";
 import { cn } from "../../utils/cn";
-import { ArtifactPreview } from "../../components/artifacts/ArtifactPreview";
+import { ArtifactPreview } from "../artifacts/ArtifactPreview";
 import type { Artifact } from "../../ai/artifacts/types";
 import { buildSessionMetadata } from "../../utils/workspace";
 import { useAppStore } from "../../stores/app";
