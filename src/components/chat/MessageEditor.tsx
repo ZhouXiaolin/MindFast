@@ -1,6 +1,6 @@
 import type { Model } from "@mariozechner/pi-ai";
 import type { ThinkingLevel } from "@mariozechner/pi-agent-core";
-import type { RefObject } from "react";
+import { useLayoutEffect, useRef, type RefObject } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Brain, Send, Square } from "lucide-react";
 import { cn } from "../../lib/cn";
@@ -39,6 +39,27 @@ export function MessageEditor({
   textareaRef,
 }: MessageEditorProps) {
   const supportsThinking = (currentModel as { reasoning?: boolean } | undefined)?.reasoning === true;
+  const localTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const resolvedTextareaRef = textareaRef ?? localTextareaRef;
+
+  useLayoutEffect(() => {
+    const textarea = resolvedTextareaRef.current;
+    if (!textarea) return;
+
+    const computedStyle = window.getComputedStyle(textarea);
+    const lineHeight = Number.parseFloat(computedStyle.lineHeight) || 28;
+    const paddingTop = Number.parseFloat(computedStyle.paddingTop) || 0;
+    const paddingBottom = Number.parseFloat(computedStyle.paddingBottom) || 0;
+    const borderTop = Number.parseFloat(computedStyle.borderTopWidth) || 0;
+    const borderBottom = Number.parseFloat(computedStyle.borderBottomWidth) || 0;
+    const minHeight = lineHeight * 3 + paddingTop + paddingBottom + borderTop + borderBottom;
+    const maxHeight = lineHeight * 5 + paddingTop + paddingBottom + borderTop + borderBottom;
+
+    textarea.style.height = "auto";
+    const nextHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
+    textarea.style.height = `${nextHeight}px`;
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [resolvedTextareaRef, value]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -67,11 +88,10 @@ export function MessageEditor({
     >
       <div className="flex items-end gap-3 px-3 pt-3">
         <textarea
-          ref={textareaRef}
-          className="min-h-[3.5rem] flex-1 resize-none overflow-y-auto bg-transparent px-2 pt-1 pb-2 text-[0.95rem] leading-7 text-sidebar placeholder-sidebar-muted outline-none"
+          ref={resolvedTextareaRef}
+          className="flex-1 resize-none overflow-y-auto bg-transparent px-2 pt-1 pb-2 text-[0.95rem] leading-7 text-sidebar placeholder-sidebar-muted outline-none"
           placeholder={placeholder}
-          rows={1}
-          style={{ minHeight: "1.5rem", maxHeight: "200px" }}
+          rows={3}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}

@@ -332,6 +332,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
   }
 
   const hasArtifacts = artifactsList.length > 0;
+  const isEmptyChat = messages.length === 0 && !streamMessage;
   const selectedArtifact = activeArtifact
     ? artifactsList.find((artifact) => artifact.filename === activeArtifact) ?? null
     : artifactsList[artifactsList.length - 1] ?? null;
@@ -406,7 +407,10 @@ export function ChatUI({ sessionId }: ChatUIProps) {
 
         <div
           ref={scrollContainerRef}
-          className="chat-scroll-region min-h-0 flex-1 overflow-y-auto"
+          className={cn(
+            "chat-scroll-region min-h-0 flex-1 overflow-y-auto",
+            isEmptyChat && "flex"
+          )}
           onScroll={() => {
             const el = scrollContainerRef.current;
             if (!el) return;
@@ -415,63 +419,82 @@ export function ChatUI({ sessionId }: ChatUIProps) {
             autoScrollRef.current = nearBottom;
           }}
         >
-          <div className="mx-auto w-full max-w-3xl px-4 pt-5 pb-3">
-            <div className="flex flex-col gap-5 px-1 py-3 sm:px-2">
-              {messages.length === 0 && !streamMessage && (
-                <p className="chat-empty-state rounded-[1.5rem] px-5 py-8 text-center text-sm text-sidebar-muted">
-                  Send a message to start.
-                </p>
-              )}
-              <MessageList
-                messages={messages}
-                tools={tools}
-              pendingToolCalls={pendingToolCalls}
-              isStreaming={isStreaming}
-              onOpenArtifact={handleOpenArtifact}
-              onEditUserMessage={handleEditUserMessage}
-              onRetryUserMessage={handleRetryUserMessage}
-            />
-              {isStreaming && (
-                <StreamingMessageContainer
-                  message={streamMessage}
-                  tools={tools}
+          {isEmptyChat ? (
+            <div className="mx-auto flex w-full max-w-3xl flex-1 items-center px-4 py-8">
+              <div className="-translate-y-[10vh] w-full px-1 transition-transform sm:px-2">
+                <MessageEditor
+                  value={input}
+                  onChange={setInput}
                   isStreaming={isStreaming}
-                  pendingToolCalls={pendingToolCalls}
-                  toolResultsById={toolResultsById}
-                  onOpenArtifact={handleOpenArtifact}
+                  currentModel={currentModel ?? undefined}
+                  thinkingLevel={thinkingLevel}
+                  onThinkingChange={(level) => {
+                    agent.setThinkingLevel(level);
+                    syncAgentState(agent);
+                  }}
+                  onSend={handleSend}
+                  onAbort={() => agent.abort()}
+                  placeholder="Type a message…"
+                  textareaRef={composerTextareaRef}
                 />
-              )}
-              <div ref={messagesEndRef} />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="mx-auto w-full max-w-3xl px-4 pt-5 pb-3">
+              <div className="flex flex-col gap-5 px-1 py-3 sm:px-2">
+                <MessageList
+                  messages={messages}
+                  tools={tools}
+                  pendingToolCalls={pendingToolCalls}
+                  isStreaming={isStreaming}
+                  onOpenArtifact={handleOpenArtifact}
+                  onEditUserMessage={handleEditUserMessage}
+                  onRetryUserMessage={handleRetryUserMessage}
+                />
+                {isStreaming && (
+                  <StreamingMessageContainer
+                    message={streamMessage}
+                    tools={tools}
+                    isStreaming={isStreaming}
+                    pendingToolCalls={pendingToolCalls}
+                    toolResultsById={toolResultsById}
+                    onOpenArtifact={handleOpenArtifact}
+                  />
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="chat-composer-dock shrink-0 border-t border-sidebar-soft">
-          <div className="mx-auto max-w-3xl px-4 pb-4 pt-3">
-            <MessageEditor
-              value={input}
-              onChange={setInput}
-              isStreaming={isStreaming}
-              currentModel={currentModel ?? undefined}
-              thinkingLevel={thinkingLevel}
-              onThinkingChange={(level) => {
-                agent.setThinkingLevel(level);
-                syncAgentState(agent);
-              }}
-              onSend={handleSend}
-              onAbort={() => agent.abort()}
-              placeholder="Type a message…"
-              textareaRef={composerTextareaRef}
-            />
-            <div className="flex h-6 items-center justify-end px-2 py-1">
-              {usageText ? (
-                <span className="text-xs text-sidebar-muted">{usageText}</span>
-              ) : (
-                <span className="text-xs text-sidebar-muted">&nbsp;</span>
-              )}
+        {!isEmptyChat ? (
+          <div className="chat-composer-dock shrink-0 border-t border-sidebar-soft">
+            <div className="mx-auto max-w-3xl px-4 pb-4 pt-3">
+              <MessageEditor
+                value={input}
+                onChange={setInput}
+                isStreaming={isStreaming}
+                currentModel={currentModel ?? undefined}
+                thinkingLevel={thinkingLevel}
+                onThinkingChange={(level) => {
+                  agent.setThinkingLevel(level);
+                  syncAgentState(agent);
+                }}
+                onSend={handleSend}
+                onAbort={() => agent.abort()}
+                placeholder="Type a message…"
+                textareaRef={composerTextareaRef}
+              />
+              <div className="flex h-6 items-center justify-end px-2 py-1">
+                {usageText ? (
+                  <span className="text-xs text-sidebar-muted">{usageText}</span>
+                ) : (
+                  <span className="text-xs text-sidebar-muted">&nbsp;</span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        ) : null}
       </div>
 
       {/* Artifacts panel */}
