@@ -1,15 +1,15 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
-import { Layout } from "./components/Layout";
-import { ChatView } from "./pages/ChatView";
-import { NewChatPage } from "./pages/NewChatPage";
-import { PlaceholderPage } from "./pages/PlaceholderPage";
-import { ChatsPage } from "./pages/ChatsPage";
-import { ArtifactsPage } from "./pages/ArtifactsPage";
-import { ArtifactDetailPage } from "./pages/ArtifactDetailPage";
-import { SettingsLayout } from "./pages/SettingsLayout";
-import { SettingsGeneral } from "./pages/SettingsGeneral";
-import { SettingsThemePresets } from "./pages/SettingsThemePresets";
-import { SettingsProvider } from "./pages/SettingsProvider";
+import { Layout } from "./ui/layout/Layout";
+import { ChatView } from "./ui/chat/ChatView";
+import { NewChatPage } from "./ui/layout/NewChatPage";
+import { PlaceholderPage } from "./ui/layout/PlaceholderPage";
+import { ChatsPage } from "./ui/layout/ChatsPage";
+import { ArtifactsPage } from "./ui/artifacts/ArtifactsPage";
+import { ArtifactDetailPage } from "./ui/artifacts/ArtifactDetailPage";
+import { SettingsLayout } from "./ui/settings/SettingsLayout";
+import { SettingsGeneral } from "./ui/settings/SettingsGeneral";
+import { SettingsThemePresets } from "./ui/settings/SettingsThemePresets";
+import { SettingsProvider } from "./ui/settings/SettingsProvider";
 
 export const router = createBrowserRouter([
   {
