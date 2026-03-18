@@ -44,6 +44,7 @@ export function MermaidBlock({ chart, className }: MermaidBlockProps) {
         mermaid.initialize({
           startOnLoad: false,
           securityLevel: "strict",
+          suppressErrorRendering: true,
           theme: resolvedTheme === "dark" ? "dark" : "default",
         });
 
