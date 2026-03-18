@@ -1,19 +1,17 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import { Check, ChevronDown, Sparkles } from "lucide-react";
-import {
-  getEnabledModels,
-  getModelForProvider,
-} from "../../init";
-import { formatUsage, type Usage } from "../../utils/format";
 import { MessageList } from "./MessageList";
 import { StreamingMessageContainer } from "./StreamingMessageContainer";
 import { MessageEditor } from "./MessageEditor";
 import { cn } from "../../utils/cn";
-import { ArtifactPreview } from "../artifacts/ArtifactPreview";
 import { useAppStore } from "../../stores/app";
 import { useChatRuntime } from "./useChatRuntime";
 import { useChatPersistence } from "./useChatPersistence";
+import { useChatModelMenu } from "./useChatModelMenu";
+import { useChatUsage } from "./useChatUsage";
+import { useArtifactsPanel } from "./useArtifactsPanel";
+import { ChatModelPicker } from "./ChatModelPicker";
+import { ChatArtifactsPanel } from "./ChatArtifactsPanel";
 
 interface ChatUIProps {
   sessionId: string;
@@ -30,14 +28,8 @@ export function ChatUI({ sessionId }: ChatUIProps) {
   const touchWorkspaceRevision = useAppStore((state) => state.touchWorkspaceRevision);
   const chatFont = useAppStore((state) => state.chatFont);
   const [input, setInput] = useState("");
-  const [activeArtifact, setActiveArtifact] = useState<string | null>(null);
-  const [showArtifactsPanel, setShowArtifactsPanel] = useState(true);
-  const [modelMenuOpen, setModelMenuOpen] = useState(false);
-  const [enabledModels, setEnabledModels] = useState<Array<{ providerId: string; modelId: string; name: string }>>([]);
-  const [isLoadingModels, setIsLoadingModels] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const modelMenuRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
   const {
@@ -52,6 +44,28 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     syncAgentState,
     thinkingLevel,
   } = useChatRuntime(sessionId);
+  const {
+    enabledModels,
+    handleSelectModelOption,
+    handleToggleMenu,
+    isLoadingModels,
+    modelMenuOpen,
+    modelMenuRef,
+  } = useChatModelMenu({
+    agent,
+    syncAgentState,
+  });
+  const { usageText } = useChatUsage(messages);
+  const {
+    hasArtifacts,
+    openArtifact,
+    openPanel,
+    closePanel,
+    selectedArtifact,
+    selectedFilename,
+    selectArtifact,
+    showArtifactsPanel,
+  } = useArtifactsPanel(artifactsList);
 
   const scrollToBottom = useCallback(() => {
     if (!autoScrollRef.current) return;
@@ -61,41 +75,6 @@ export function ChatUI({ sessionId }: ChatUIProps) {
   useEffect(() => {
     scrollToBottom();
   }, [messages, streamMessage, scrollToBottom]);
-
-  useEffect(() => {
-    if (artifactsList.length === 0) {
-      setActiveArtifact(null);
-      return;
-    }
-
-    if (!activeArtifact || !artifactsList.some((artifact) => artifact.filename === activeArtifact)) {
-      setActiveArtifact(artifactsList[artifactsList.length - 1]?.filename ?? null);
-    }
-  }, [activeArtifact, artifactsList]);
-
-  useEffect(() => {
-    if (!modelMenuOpen) return;
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (!modelMenuRef.current?.contains(event.target as Node)) {
-        setModelMenuOpen(false);
-      }
-    };
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setModelMenuOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [modelMenuOpen]);
 
   useChatPersistence({
     agent,
@@ -152,40 +131,6 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     [agent, isSessionReady, isStreaming, messages, syncAgentState]
   );
 
-  const handleModelSelect = useCallback(async () => {
-    if (!enabledModels.length && !isLoadingModels) {
-      setIsLoadingModels(true);
-      try {
-        setEnabledModels(await getEnabledModels());
-      } catch (error) {
-        console.error("Failed to load enabled models:", error);
-      } finally {
-        setIsLoadingModels(false);
-      }
-    }
-    setModelMenuOpen((open) => !open);
-  }, [enabledModels.length, isLoadingModels]);
-
-  const handleSelectModelOption = useCallback(
-    async (providerId: string, modelId: string) => {
-      if (!agent) return;
-      try {
-        const model = await getModelForProvider(providerId, modelId);
-        agent.setModel(model);
-        syncAgentState(agent);
-        setModelMenuOpen(false);
-      } catch (error) {
-        console.error("Failed to select model:", error);
-      }
-    },
-    [agent, syncAgentState]
-  );
-
-  const handleOpenArtifact = useCallback((filename: string) => {
-    setActiveArtifact(filename);
-    setShowArtifactsPanel(true);
-  }, []);
-
   const toolResultsById = useRef(new Map<string, ToolResultMessage>()).current;
   toolResultsById.clear();
   for (const m of messages) {
@@ -198,33 +143,6 @@ export function ChatUI({ sessionId }: ChatUIProps) {
   const tools = agent?.state.tools ?? [];
   const pendingToolCalls = agent?.state.pendingToolCalls ?? new Set<string>();
 
-  let totalInput = 0;
-  let totalOutput = 0;
-  let totalCacheRead = 0;
-  let totalCacheWrite = 0;
-  let totalCost = 0;
-  for (const m of messages) {
-    if (m.role === "assistant") {
-      const u = (m as { usage?: Usage }).usage;
-      if (u) {
-        totalInput += u.input ?? 0;
-        totalOutput += u.output ?? 0;
-        totalCacheRead += u.cacheRead ?? 0;
-        totalCacheWrite += u.cacheWrite ?? 0;
-        totalCost += u.cost?.total ?? 0;
-      }
-    }
-  }
-  const usageTotals: Usage = {
-    input: totalInput || undefined,
-    output: totalOutput || undefined,
-    cacheRead: totalCacheRead || undefined,
-    cacheWrite: totalCacheWrite || undefined,
-    cost: totalCost ? { total: totalCost } : undefined,
-  };
-  const hasUsage = totalInput + totalOutput + totalCacheRead + totalCacheWrite > 0;
-  const usageText = hasUsage ? formatUsage(usageTotals) : "";
-
   if (!agent) {
     return (
       <div className="flex h-full items-center justify-center text-sidebar-muted">
@@ -233,12 +151,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     );
   }
 
-  const hasArtifacts = artifactsList.length > 0;
   const isEmptyChat = messages.length === 0 && !streamMessage;
-  const selectedArtifact = activeArtifact
-    ? artifactsList.find((artifact) => artifact.filename === activeArtifact) ?? null
-    : artifactsList[artifactsList.length - 1] ?? null;
-  const selectedFilename = selectedArtifact?.filename ?? null;
 
   return (
     <div className="relative flex h-full flex-1 min-w-0">
@@ -248,63 +161,19 @@ export function ChatUI({ sessionId }: ChatUIProps) {
         style={{ minHeight: 0 }}
       >
         <div className="chat-topbar flex shrink-0 items-center justify-between border-b border-sidebar-soft px-4 py-3">
-          <div ref={modelMenuRef} className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                void handleModelSelect();
-              }}
-              className="inline-flex max-w-[min(26rem,72vw)] items-center gap-2 rounded-full bg-sidebar-panel px-3 py-1.5 text-sm text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar"
-              title={currentModel?.id ?? "No model"}
-              aria-expanded={modelMenuOpen}
-            >
-              <Sparkles className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{currentModel?.id ?? "No model"}</span>
-              <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", modelMenuOpen && "rotate-180")} />
-            </button>
-            {modelMenuOpen ? (
-              <div className="absolute left-0 top-full z-40 mt-2 w-[min(30rem,80vw)] overflow-hidden rounded-2xl border border-sidebar-soft bg-sidebar-panel-strong shadow-xl backdrop-blur-xl">
-                <div className="border-b border-sidebar-soft px-3 py-2 text-xs uppercase tracking-[0.14em] text-sidebar-muted">
-                  Select model
-                </div>
-                <div className="max-h-80 overflow-y-auto p-2">
-                  {isLoadingModels ? (
-                    <div className="px-3 py-3 text-sm text-sidebar-muted">Loading models…</div>
-                  ) : enabledModels.length === 0 ? (
-                    <div className="px-3 py-3 text-sm text-sidebar-muted">No enabled models</div>
-                  ) : (
-                    enabledModels.map((modelOption) => {
-                      const isCurrent =
-                        currentModel?.provider === modelOption.providerId &&
-                        currentModel?.id === modelOption.modelId;
-
-                      return (
-                        <button
-                          key={`${modelOption.providerId}:${modelOption.modelId}`}
-                          type="button"
-                          onClick={() => {
-                            void handleSelectModelOption(modelOption.providerId, modelOption.modelId);
-                          }}
-                          className={cn(
-                            "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
-                            isCurrent
-                              ? "bg-accent/10 text-sidebar"
-                              : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
-                          )}
-                        >
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-medium">{modelOption.modelId}</div>
-                            <div className="mt-0.5 text-xs text-sidebar-muted">{modelOption.providerId}</div>
-                          </div>
-                          {isCurrent ? <Check className="h-4 w-4 shrink-0 text-accent" /> : null}
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            ) : null}
-          </div>
+          <ChatModelPicker
+            currentModel={currentModel}
+            enabledModels={enabledModels}
+            isLoadingModels={isLoadingModels}
+            modelMenuOpen={modelMenuOpen}
+            modelMenuRef={modelMenuRef}
+            onSelectModelOption={(providerId, modelId) => {
+              void handleSelectModelOption(providerId, modelId);
+            }}
+            onToggleMenu={() => {
+              void handleToggleMenu();
+            }}
+          />
         </div>
 
         <div
@@ -349,7 +218,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
                   tools={tools}
                   pendingToolCalls={pendingToolCalls}
                   isStreaming={isStreaming}
-                  onOpenArtifact={handleOpenArtifact}
+                  onOpenArtifact={openArtifact}
                   onEditUserMessage={handleEditUserMessage}
                   onRetryUserMessage={handleRetryUserMessage}
                 />
@@ -360,7 +229,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
                     isStreaming={isStreaming}
                     pendingToolCalls={pendingToolCalls}
                     toolResultsById={toolResultsById}
-                    onOpenArtifact={handleOpenArtifact}
+                    onOpenArtifact={openArtifact}
                   />
                 )}
                 <div ref={messagesEndRef} />
@@ -399,69 +268,17 @@ export function ChatUI({ sessionId }: ChatUIProps) {
         ) : null}
       </div>
 
-      {/* Artifacts panel */}
-      {hasArtifacts && (
-        <div
-          className={cn(
-            "min-h-0 border-l border-sidebar-soft bg-sidebar-panel backdrop-blur-sm",
-            showArtifactsPanel ? "flex w-[min(44rem,48vw)] shrink-0 flex-col" : "hidden"
-          )}
-          style={{ minHeight: 0 }}
-        >
-          <div className="flex shrink-0 items-center justify-between border-b border-sidebar-soft px-4 py-3">
-            <div>
-              <div className="text-sm font-medium text-sidebar">Artifacts</div>
-              <div className="mt-1 text-xs text-sidebar-muted">
-                Sandbox preview for HTML, styled preview for Markdown.
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowArtifactsPanel(false)}
-              className="rounded-full p-2 text-sidebar-muted transition-colors hover:bg-sidebar-panel-strong hover:text-sidebar"
-              aria-label="Close artifacts"
-            >
-              ×
-            </button>
-          </div>
-          <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-sidebar-soft px-4 py-3">
-            {artifactsList.map((artifact) => (
-              <button
-                key={artifact.filename}
-                type="button"
-                onClick={() => setActiveArtifact(artifact.filename)}
-                className={cn(
-                  "shrink-0 rounded-full border px-3 py-1.5 text-xs font-mono whitespace-nowrap transition-colors",
-                  selectedFilename === artifact.filename
-                    ? "border-accent/30 bg-accent/10 text-sidebar"
-                    : "border-sidebar-soft bg-sidebar-panel text-sidebar-muted hover:bg-sidebar-panel-strong hover:text-sidebar"
-                )}
-              >
-                {artifact.filename}
-              </button>
-            ))}
-          </div>
-          <div className="flex-1 min-h-0 overflow-hidden">
-            {selectedArtifact ? (
-              <ArtifactPreview
-                filename={selectedArtifact.filename}
-                content={selectedArtifact.content}
-              />
-            ) : null}
-          </div>
-        </div>
-      )}
-
-      {hasArtifacts && !showArtifactsPanel && (
-        <button
-          type="button"
-          onClick={() => setShowArtifactsPanel(true)}
-          className="absolute left-1/2 top-4 z-30 -translate-x-1/2 rounded-full border border-sidebar-soft bg-sidebar-panel px-3 py-1.5 text-xs text-sidebar shadow-lg transition-colors hover:bg-sidebar-panel-strong"
-          title="Show artifacts"
-        >
-          Artifacts ({artifactsList.length})
-        </button>
-      )}
+      {hasArtifacts ? (
+        <ChatArtifactsPanel
+          artifactsList={artifactsList}
+          selectedArtifact={selectedArtifact}
+          selectedFilename={selectedFilename}
+          showArtifactsPanel={showArtifactsPanel}
+          onClosePanel={closePanel}
+          onOpenPanel={openPanel}
+          onSelectArtifact={selectArtifact}
+        />
+      ) : null}
     </div>
   );
 }
