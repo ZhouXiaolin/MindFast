@@ -1,5 +1,5 @@
 import { Agent } from "@mariozechner/pi-agent-core";
-import { getModel } from "@mariozechner/pi-ai";
+import { getModel, getModels } from "@mariozechner/pi-ai";
 import type { Model } from "@mariozechner/pi-ai";
 import type { ExtendedAppStorage } from "../stores/init";
 import { defaultConvertToLlm } from "./convert";
@@ -147,7 +147,6 @@ export async function getEnabledModels(
           const stored = storedModels.find((m) => m.id === modelId);
           if (stored) modelName = stored.name;
         } else if (isKnownProvider(providerId)) {
-          const { getModels } = await import("@mariozechner/pi-ai");
           const models = getModels(providerId as any);
           const model = models.find((m) => m.id === modelId);
           if (model) modelName = model.name;

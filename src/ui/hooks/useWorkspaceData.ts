@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { SessionMetadata } from "../../stores/storage";
-import { getAppStorage, initApp } from "../../init";
+import { getInitializedAppStorage } from "../../init";
 import { useAppStore } from "../../stores/app";
 import {
   extractArtifactsFromMessages,
@@ -18,10 +18,7 @@ export function useSessionMetadataList() {
     const load = async () => {
       setLoading(true);
       try {
-        await initApp();
-        const storage = getAppStorage();
-        if (!storage) return;
-
+        const storage = await getInitializedAppStorage();
         const metadata = await storage.sessions.getAllMetadata();
         if (!cancelled) {
           setSessions(metadata);
@@ -59,10 +56,7 @@ export function useSavedArtifacts() {
     const load = async () => {
       setLoading(true);
       try {
-        await initApp();
-        const storage = getAppStorage();
-        if (!storage) return;
-
+        const storage = await getInitializedAppStorage();
         const metadataList = await storage.sessions.getAllMetadata();
         const sessions = await Promise.all(
           metadataList.map(async (metadata) => {

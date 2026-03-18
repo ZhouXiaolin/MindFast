@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { initApp, getAppStorage } from "../../init";
+import { getInitializedAppStorage } from "../../init";
 import { setApiKeyPromptHandler } from "../../ai/api-key-prompt";
 import { NoModelConfigured } from "../shared/NoModelConfigured";
 import { ChatUI } from "./ChatUI";
@@ -19,12 +19,7 @@ export function ChatView() {
     let cancelled = false;
     const checkModelConfig = async () => {
       try {
-        await initApp();
-        const storage = getAppStorage();
-        if (!storage) {
-          if (!cancelled) setHasConfig(false);
-          return;
-        }
+        const storage = await getInitializedAppStorage();
         const enabledProviderIds = await storage.enabledProviders.getAll();
         let hasAnyEnabledModel = false;
         for (const providerId of enabledProviderIds) {

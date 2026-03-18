@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { getAppStorage } from "../../init";
+import { getInitializedAppStorage } from "../../init";
 
 interface ApiKeyPromptDialogProps {
   provider: string;
@@ -22,9 +22,8 @@ export function ApiKeyPromptDialog({
     if (!open) return;
     setKey("");
     const interval = setInterval(async () => {
-      const storage = getAppStorage();
-      if (!storage) return;
       setChecking(true);
+      const storage = await getInitializedAppStorage();
       const existing = await storage.providerKeys.get(provider);
       setChecking(false);
       if (existing) {
@@ -37,8 +36,8 @@ export function ApiKeyPromptDialog({
   }, [open, provider, onResolve, onOpenChange]);
 
   const handleSave = async () => {
-    const storage = getAppStorage();
-    if (!storage || !key.trim()) return;
+    if (!key.trim()) return;
+    const storage = await getInitializedAppStorage();
     await storage.providerKeys.set(provider, key.trim());
     onResolve(true);
     onOpenChange(false);

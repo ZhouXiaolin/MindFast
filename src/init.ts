@@ -1,11 +1,20 @@
 import { Agent } from "@mariozechner/pi-agent-core";
 import { initStorage, type ExtendedAppStorage } from "./stores/init";
-import { createAgent } from "./ai/agent";
+import {
+  createAgent,
+  getEnabledModels as getEnabledModelsFromStorage,
+  getModelForProvider as getModelForProviderFromAgent,
+} from "./ai/agent";
 import { ArtifactsStore } from "./ai/artifacts/store";
+import {
+  hydrateAppSettings,
+  subscribeAppSettingsPersistence,
+} from "./stores/app-settings";
 
 let storage: ExtendedAppStorage | null = null;
 let agent: Agent | null = null;
 let artifactsStore: ArtifactsStore | null = null;
+let appSettingsPersistenceCleanup: (() => void) | null = null;
 let initPromise: Promise<{ storage: ExtendedAppStorage; agent: Agent; artifactsStore: ArtifactsStore }> | null = null;
 
 /**
@@ -27,6 +36,10 @@ export async function initApp(): Promise<{
     // Initialize storage
     const appStorage = await initStorage();
     storage = appStorage;
+    await hydrateAppSettings(appStorage);
+    if (!appSettingsPersistenceCleanup) {
+      appSettingsPersistenceCleanup = subscribeAppSettingsPersistence(appStorage);
+    }
 
     // Initialize artifacts store
     const store = new ArtifactsStore();
@@ -60,22 +73,24 @@ export function getArtifactsStore(): ArtifactsStore | null {
   return artifactsStore;
 }
 
+export async function getInitializedAppStorage(): Promise<ExtendedAppStorage> {
+  const { storage: appStorage } = await initApp();
+  return appStorage;
+}
+
 /**
  * Get all enabled models from storage
  */
 export async function getEnabledModels(): Promise<Array<{ providerId: string; modelId: string; name: string }>> {
-  const s = storage;
-  if (!s) return [];
-  const { getEnabledModels: _getEnabledModels } = await import("./ai/agent");
-  return _getEnabledModels(s);
+  const appStorage = await getInitializedAppStorage();
+  return getEnabledModelsFromStorage(appStorage);
 }
 
 /**
  * Get a model object for the given provider and model ID
  */
 export async function getModelForProvider(providerId: string, modelId: string) {
-  const { getModelForProvider: _getModelForProvider } = await import("./ai/agent");
-  return _getModelForProvider(providerId, modelId);
+  return getModelForProviderFromAgent(providerId, modelId);
 }
 
 /**

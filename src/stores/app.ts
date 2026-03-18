@@ -4,45 +4,79 @@ export type Lang = "en" | "zh";
 export type ColorMode = "light" | "auto" | "dark";
 export type ChatFont = "default" | "sans" | "system" | "dyslexic";
 
-interface AppState {
+export interface AppSettings {
   lang: Lang;
-  setLang: (lang: Lang) => void;
   colorMode: ColorMode;
+  themePresetIdDark: string;
+  themePresetIdLight: string;
+  chatFont: ChatFont;
+  sidebarOpen: boolean;
+  userName: string;
+  userEmail: string;
+}
+
+interface AppState extends AppSettings {
+  hydrated: boolean;
+  setLang: (lang: Lang) => void;
   setColorMode: (mode: ColorMode) => void;
   /** Base46 深色预设 id，见 themes/base46.ts */
-  themePresetIdDark: string;
   setThemePresetIdDark: (id: string) => void;
   /** Base46 浅色预设 id */
-  themePresetIdLight: string;
   setThemePresetIdLight: (id: string) => void;
-  chatFont: ChatFont;
   setChatFont: (font: ChatFont) => void;
-  sidebarOpen: boolean;
   toggleSidebar: () => void;
-  userName: string;
   setUserName: (name: string) => void;
-  userEmail: string;
   setUserEmail: (email: string) => void;
   workspaceRevision: number;
   touchWorkspaceRevision: () => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const DEFAULT_APP_SETTINGS: AppSettings = {
   lang: "en",
-  setLang: (lang) => set({ lang }),
   colorMode: "dark",
-  setColorMode: (colorMode) => set({ colorMode }),
   themePresetIdDark: "default-dark",
-  setThemePresetIdDark: (themePresetIdDark) => set({ themePresetIdDark }),
   themePresetIdLight: "default-light",
-  setThemePresetIdLight: (themePresetIdLight) => set({ themePresetIdLight }),
   chatFont: "default",
-  setChatFont: (chatFont) => set({ chatFont }),
   sidebarOpen: true,
-  toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   userName: "Solaren",
-  setUserName: (userName) => set({ userName }),
   userEmail: "user@example.com",
+};
+
+export function selectAppSettings(state: AppSettings): AppSettings {
+  return {
+    lang: state.lang,
+    colorMode: state.colorMode,
+    themePresetIdDark: state.themePresetIdDark,
+    themePresetIdLight: state.themePresetIdLight,
+    chatFont: state.chatFont,
+    sidebarOpen: state.sidebarOpen,
+    userName: state.userName,
+    userEmail: state.userEmail,
+  };
+}
+
+export function getAppSettingsSnapshot(): AppSettings {
+  return selectAppSettings(useAppStore.getState());
+}
+
+export function applyAppSettings(settings: Partial<AppSettings>): void {
+  useAppStore.setState((state) => ({
+    ...state,
+    ...settings,
+    hydrated: true,
+  }));
+}
+
+export const useAppStore = create<AppState>((set) => ({
+  ...DEFAULT_APP_SETTINGS,
+  hydrated: false,
+  setLang: (lang) => set({ lang }),
+  setColorMode: (colorMode) => set({ colorMode }),
+  setThemePresetIdDark: (themePresetIdDark) => set({ themePresetIdDark }),
+  setThemePresetIdLight: (themePresetIdLight) => set({ themePresetIdLight }),
+  setChatFont: (chatFont) => set({ chatFont }),
+  toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+  setUserName: (userName) => set({ userName }),
   setUserEmail: (userEmail) => set({ userEmail }),
   workspaceRevision: 0,
   touchWorkspaceRevision: () =>

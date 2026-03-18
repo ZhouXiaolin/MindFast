@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { initApp, getAppStorage } from "../../init";
+import { getInitializedAppStorage } from "../../init";
 import type { CustomProvider, AutoDiscoveryProviderType } from "../../stores/storage";
 import { getModels } from "@mariozechner/pi-ai";
 import {
@@ -54,9 +54,7 @@ export function SettingsProvider() {
   }>>({});
 
   const loadStorage = useCallback(async () => {
-    await initApp();
-    const storage = getAppStorage();
-    if (!storage) return null;
+    const storage = await getInitializedAppStorage();
     const custom = await storage.customProviders.getAll();
     setCustomProviders(custom);
 
@@ -102,8 +100,7 @@ export function SettingsProvider() {
   }, [loadStorage]);
 
   const refreshProviders = useCallback(async () => {
-    const storage = getAppStorage();
-    if (!storage) return;
+    const storage = await getInitializedAppStorage();
     const list = await storage.customProviders.getAll();
     setCustomProviders(list);
   }, []);
@@ -133,8 +130,7 @@ export function SettingsProvider() {
 
   const handleAddProvider = useCallback(
     async (form: AddCustomProviderForm) => {
-      const storage = getAppStorage();
-      if (!storage) return;
+      const storage = await getInitializedAppStorage();
       const provider: CustomProvider = {
         id: crypto.randomUUID(),
         name: form.name,
@@ -150,8 +146,7 @@ export function SettingsProvider() {
   );
 
   const handleSaveAll = useCallback(async () => {
-    const storage = getAppStorage();
-    if (!storage) return;
+    const storage = await getInitializedAppStorage();
     setSaving(true);
 
     try {
@@ -206,8 +201,7 @@ export function SettingsProvider() {
 
   const handleDeleteCustomProvider = useCallback(
     async (id: string) => {
-      const storage = getAppStorage();
-      if (!storage) return;
+      const storage = await getInitializedAppStorage();
       await storage.customProviders.delete(id);
       if (selectedId === id) setSelectedId(null);
       await refreshProviders();
@@ -216,8 +210,7 @@ export function SettingsProvider() {
   );
 
   const handleToggleProvider = useCallback(async (providerId: string, enabled: boolean) => {
-    const storage = getAppStorage();
-    if (!storage) return;
+    const storage = await getInitializedAppStorage();
     if (enabled) {
       await storage.enabledProviders.add(providerId);
       setEnabledProviders((prev) => new Set(prev).add(providerId));
@@ -232,8 +225,7 @@ export function SettingsProvider() {
   }, []);
 
   const handleFetchModels = useCallback(async (providerId: string) => {
-    const storage = getAppStorage();
-    if (!storage) return;
+    const storage = await getInitializedAppStorage();
     setFetchingModels((prev) => new Set(prev).add(providerId));
 
     try {
@@ -290,8 +282,7 @@ export function SettingsProvider() {
   }, [customProviders]);
 
   const handleToggleModel = useCallback(async (providerId: string, modelId: string, enabled: boolean) => {
-    const storage = getAppStorage();
-    if (!storage) return;
+    const storage = await getInitializedAppStorage();
 
     const currentEnabled = enabledModels[providerId] || new Set();
     const newEnabled = new Set(currentEnabled);

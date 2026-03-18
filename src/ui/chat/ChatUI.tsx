@@ -1,18 +1,19 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import type { Agent, AgentMessage, ThinkingLevel } from "@mariozechner/pi-agent-core";
-import type { Model, ToolResultMessage } from "@mariozechner/pi-ai";
+import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { Check, ChevronDown, Sparkles } from "lucide-react";
-import type { ArtifactsStore } from "../../ai/artifacts/store";
-import { initApp, getAppStorage, getEnabledModels, getModelForProvider } from "../../init";
+import {
+  getEnabledModels,
+  getModelForProvider,
+} from "../../init";
 import { formatUsage, type Usage } from "../../utils/format";
 import { MessageList } from "./MessageList";
 import { StreamingMessageContainer } from "./StreamingMessageContainer";
 import { MessageEditor } from "./MessageEditor";
 import { cn } from "../../utils/cn";
 import { ArtifactPreview } from "../artifacts/ArtifactPreview";
-import type { Artifact } from "../../ai/artifacts/types";
-import { buildSessionMetadata } from "../../utils/workspace";
 import { useAppStore } from "../../stores/app";
+import { useChatRuntime } from "./useChatRuntime";
+import { useChatPersistence } from "./useChatPersistence";
 
 interface ChatUIProps {
   sessionId: string;
@@ -28,14 +29,7 @@ const CHAT_FONT_CLASS: Record<import("../../stores/app").ChatFont, string> = {
 export function ChatUI({ sessionId }: ChatUIProps) {
   const touchWorkspaceRevision = useAppStore((state) => state.touchWorkspaceRevision);
   const chatFont = useAppStore((state) => state.chatFont);
-  const [agent, setAgent] = useState<Agent | null>(null);
-  const [currentModel, setCurrentModel] = useState<Model<any> | null>(null);
-  const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel>("off");
-  const [messages, setMessages] = useState<AgentMessage[]>([]);
-  const [streamMessage, setStreamMessage] = useState<AgentMessage | null>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
   const [input, setInput] = useState("");
-  const [artifactsList, setArtifactsList] = useState<Artifact[]>([]);
   const [activeArtifact, setActiveArtifact] = useState<string | null>(null);
   const [showArtifactsPanel, setShowArtifactsPanel] = useState(true);
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
@@ -45,103 +39,28 @@ export function ChatUI({ sessionId }: ChatUIProps) {
   const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
   const modelMenuRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const artifactsStoreRef = useRef<ArtifactsStore | null>(null);
   const autoScrollRef = useRef(true);
-  const hydratedSessionRef = useRef<string | null>(null);
-  const isHydratingRef = useRef(false);
+  const {
+    agent,
+    artifactsList,
+    currentModel,
+    isHydratingRef,
+    isSessionReady,
+    isStreaming,
+    messages,
+    streamMessage,
+    syncAgentState,
+    thinkingLevel,
+  } = useChatRuntime(sessionId);
 
   const scrollToBottom = useCallback(() => {
     if (!autoScrollRef.current) return;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  const cloneStreamMessage = useCallback((message: AgentMessage | null) => {
-    if (!message) {
-      return null;
-    }
-    return JSON.parse(JSON.stringify(message)) as AgentMessage;
-  }, []);
-
-  const syncAgentState = useCallback((nextAgent: Agent, store?: ArtifactsStore | null) => {
-    setCurrentModel(nextAgent.state.model ?? null);
-    setThinkingLevel(nextAgent.state.thinkingLevel ?? "off");
-    setMessages(nextAgent.state.messages.slice());
-    setStreamMessage(cloneStreamMessage(nextAgent.state.streamMessage ?? null));
-    setIsStreaming(nextAgent.state.isStreaming);
-    (store ?? artifactsStoreRef.current)?.reconstructFromMessages(nextAgent.state.messages);
-  }, [cloneStreamMessage]);
-
-  useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-    initApp()
-      .then(({ agent: a, artifactsStore: store }) => {
-        setAgent(a);
-        artifactsStoreRef.current = store;
-        syncAgentState(a, store);
-        setArtifactsList(store.getSnapshot().map(([, artifact]) => artifact));
-        store.onChange = () => {
-          setArtifactsList(store.getSnapshot().map(([, artifact]) => artifact));
-        };
-        unsubscribe = a.subscribe(() => {
-          syncAgentState(a, store);
-        });
-      })
-      .catch(console.error);
-    return () => {
-      unsubscribe?.();
-      if (artifactsStoreRef.current) {
-        artifactsStoreRef.current.onChange = null;
-        artifactsStoreRef.current = null;
-      }
-    };
-  }, [syncAgentState]);
-
   useEffect(() => {
     scrollToBottom();
   }, [messages, streamMessage, scrollToBottom]);
-
-  useEffect(() => {
-    if (!agent || hydratedSessionRef.current === sessionId) return;
-
-    let cancelled = false;
-
-    const hydrateSession = async () => {
-      try {
-        isHydratingRef.current = true;
-        const storage = getAppStorage();
-        const savedSession = storage
-          ? await storage.sessions.loadSession(sessionId)
-          : null;
-
-        if (cancelled) return;
-
-        agent.abort();
-        agent.reset();
-        agent.sessionId = sessionId;
-
-        if (savedSession) {
-          agent.setModel(savedSession.model);
-          agent.setThinkingLevel(savedSession.thinkingLevel);
-          agent.replaceMessages(savedSession.messages);
-        } else {
-          agent.replaceMessages([]);
-        }
-
-        hydratedSessionRef.current = sessionId;
-        syncAgentState(agent);
-      } catch (error) {
-        console.error("Failed to hydrate chat session:", error);
-      } finally {
-        isHydratingRef.current = false;
-      }
-    };
-
-    hydrateSession();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [agent, sessionId, syncAgentState]);
 
   useEffect(() => {
     if (artifactsList.length === 0) {
@@ -178,11 +97,19 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     };
   }, [modelMenuOpen]);
 
+  useChatPersistence({
+    agent,
+    isHydratingRef,
+    messages,
+    sessionId,
+    touchWorkspaceRevision,
+  });
+
   const handleSend = useCallback(
     async (text: string) => {
       const t = text.trim();
       if (!t || !agent || isStreaming) return;
-      if (hydratedSessionRef.current !== sessionId) return;
+      if (!isSessionReady()) return;
       setInput("");
       autoScrollRef.current = true;
       try {
@@ -191,7 +118,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
         console.error(err);
       }
     },
-    [agent, isStreaming, sessionId]
+    [agent, isSessionReady, isStreaming]
   );
 
   const handleEditUserMessage = useCallback((text: string) => {
@@ -208,7 +135,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     async (messageIndex: number, text: string) => {
       const t = text.trim();
       if (!t || !agent || isStreaming) return;
-      if (hydratedSessionRef.current !== sessionId) return;
+      if (!isSessionReady()) return;
 
       autoScrollRef.current = true;
       setInput("");
@@ -222,33 +149,8 @@ export function ChatUI({ sessionId }: ChatUIProps) {
         console.error(error);
       }
     },
-    [agent, isStreaming, messages, sessionId, syncAgentState]
+    [agent, isSessionReady, isStreaming, messages, syncAgentState]
   );
-
-  useEffect(() => {
-    if (!agent) return;
-    if (hydratedSessionRef.current !== sessionId) return;
-    if (isHydratingRef.current) return;
-    if (messages.length === 0) return;
-
-    const timeoutId = window.setTimeout(async () => {
-      try {
-        const storage = getAppStorage();
-        if (!storage) return;
-
-        const existingMetadata = await storage.sessions.getMetadata(sessionId);
-        const metadata = buildSessionMetadata(sessionId, agent.state, existingMetadata);
-        await storage.sessions.saveSession(sessionId, agent.state, metadata, metadata.title);
-        touchWorkspaceRevision();
-      } catch (error) {
-        console.error("Failed to persist chat session:", error);
-      }
-    }, 120);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [agent, messages, sessionId, touchWorkspaceRevision]);
 
   const handleModelSelect = useCallback(async () => {
     if (!enabledModels.length && !isLoadingModels) {
