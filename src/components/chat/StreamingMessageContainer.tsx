@@ -8,7 +8,6 @@ interface StreamingMessageContainerProps {
   isStreaming?: boolean;
   pendingToolCalls?: Set<string>;
   toolResultsById?: Map<string, ToolResultMessage>;
-  onCostClick?: () => void;
   onOpenArtifact?: (filename: string) => void;
 }
 
@@ -18,14 +17,13 @@ export function StreamingMessageContainer({
   isStreaming = false,
   pendingToolCalls,
   toolResultsById = new Map(),
-  onCostClick,
   onOpenArtifact,
 }: StreamingMessageContainerProps) {
   if (!message) {
     if (isStreaming) {
       return (
-        <div className="flex flex-col gap-3">
-          <span className="mx-4 inline-block h-4 w-2 animate-pulse rounded bg-sidebar-muted" />
+        <div className="assistant-message-container flex flex-col gap-3">
+          <span className="ml-1 inline-block h-4 w-2 animate-pulse rounded bg-sidebar-muted" />
         </div>
       );
     }
@@ -46,11 +44,12 @@ export function StreamingMessageContainer({
           toolResultsById={toolResultsById}
           isStreaming={isStreaming}
           hidePendingToolCalls={false}
-          onCostClick={onCostClick}
           onOpenArtifact={onOpenArtifact}
         />
         {isStreaming ? (
-          <span className="mx-4 inline-block h-4 w-2 animate-pulse rounded bg-sidebar-muted" />
+          <div className="assistant-message-container flex">
+            <span className="ml-1 inline-block h-4 w-2 animate-pulse rounded bg-sidebar-muted" />
+          </div>
         ) : null}
       </div>
     );

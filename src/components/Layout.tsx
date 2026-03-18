@@ -2,11 +2,11 @@ import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { NavLink } from "react-router-dom";
 import { cn } from "../lib/cn";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "../stores/appStore";
 import { useSessionMetadataList } from "../hooks/useWorkspaceData";
 import { createSessionId } from "../lib/workspace";
+import { useResolvedTheme } from "../contexts/ThemeProvider";
 import {
   MessageSquarePlus,
   Search,
@@ -19,12 +19,12 @@ import {
   Palette,
   Settings,
 } from "lucide-react";
-import type { ColorMode } from "../stores/appStore";
 
 export function Layout() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { setLang, sidebarOpen, toggleSidebar, userName, userEmail, colorMode, setColorMode } = useAppStore();
+  const { sidebarOpen, toggleSidebar, colorMode, setColorMode } = useAppStore();
+  const resolvedTheme = useResolvedTheme();
   const { sessions } = useSessionMetadataList();
   const [recentsOpen, setRecentsOpen] = useState(true);
   const recentSessions = sessions.slice(0, 8);
@@ -174,46 +174,23 @@ export function Layout() {
         
           {/* Bottom: Theme + Settings (stacked) */}
           <div className="shrink-0 flex flex-col gap-0.5 border-t border-sidebar p-2">
-            <DropdownMenu.Root>
-              <DropdownMenu.Trigger asChild>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar",
-                    !sidebarOpen && "justify-center px-0"
-                  )}
-                  aria-haspopup="listbox"
-                  aria-label={t("theme")}
-                >
-                  <Palette className="h-5 w-5 shrink-0" />
-                  {sidebarOpen && (
-                    <span className="min-w-0 flex-1 truncate">
-                      {t(colorMode === "light" ? "colorModeLight" : colorMode === "dark" ? "colorModeDark" : "colorModeAuto")}
-                    </span>
-                  )}
-                </button>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.Content
-                  className="min-w-40 rounded-lg border border-sidebar bg-sidebar py-1.5 shadow-xl text-sidebar z-50"
-                  sideOffset={6}
-                  side="left"
-                  align="end"
-                >
-                  {(["light", "auto", "dark"] as ColorMode[]).map((mode) => (
-                    <DropdownMenu.Item
-                      key={mode}
-                      className="cursor-pointer rounded-none px-3 py-2 text-sm text-sidebar outline-none data-highlighted:bg-sidebar-hover"
-                      onSelect={() => setColorMode(mode)}
-                    >
-                      <span className={cn(colorMode === mode && "font-medium")}>
-                        {t(mode === "light" ? "colorModeLight" : mode === "dark" ? "colorModeDark" : "colorModeAuto")}
-                      </span>
-                    </DropdownMenu.Item>
-                  ))}
-                </DropdownMenu.Content>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Root>
+            <button
+              type="button"
+              onClick={() => setColorMode(resolvedTheme === "dark" ? "light" : "dark")}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar",
+                !sidebarOpen && "justify-center px-0"
+              )}
+              aria-label={t("theme")}
+              title={t(resolvedTheme === "dark" ? "colorModeLight" : "colorModeDark")}
+            >
+              <Palette className="h-5 w-5 shrink-0" />
+              {sidebarOpen && (
+                <span className="min-w-0 flex-1 truncate">
+                  {t(colorMode === "light" ? "colorModeLight" : colorMode === "dark" ? "colorModeDark" : "colorModeAuto")}
+                </span>
+              )}
+            </button>
             <NavLink
               to="/settings/general"
               className={({ isActive }) =>

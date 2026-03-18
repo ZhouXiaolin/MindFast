@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import type { Agent, AgentMessage, ThinkingLevel } from "@mariozechner/pi-agent-core";
 import type { Model, ToolResultMessage } from "@mariozechner/pi-ai";
+import { Check, ChevronDown, Sparkles } from "lucide-react";
 import type { ArtifactsStore } from "../pi/artifacts/store";
-import { initPi, createCustomModelSelector, getAgent, getAppStorage } from "../pi/initPi";
+import { initPi, getAppStorage, getEnabledModels, getModelForProvider } from "../pi/initPi";
 import { formatUsage, type Usage } from "../lib/format";
 import { MessageList } from "./chat/MessageList";
 import { StreamingMessageContainer } from "./chat/StreamingMessageContainer";
@@ -37,7 +38,12 @@ export function ChatUI({ sessionId }: ChatUIProps) {
   const [artifactsList, setArtifactsList] = useState<Artifact[]>([]);
   const [activeArtifact, setActiveArtifact] = useState<string | null>(null);
   const [showArtifactsPanel, setShowArtifactsPanel] = useState(true);
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  const [enabledModels, setEnabledModels] = useState<Array<{ providerId: string; modelId: string; name: string }>>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const modelMenuRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const artifactsStoreRef = useRef<ArtifactsStore | null>(null);
   const autoScrollRef = useRef(true);
@@ -148,6 +154,30 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     }
   }, [activeArtifact, artifactsList]);
 
+  useEffect(() => {
+    if (!modelMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!modelMenuRef.current?.contains(event.target as Node)) {
+        setModelMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setModelMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [modelMenuOpen]);
+
   const handleSend = useCallback(
     async (text: string) => {
       const t = text.trim();
@@ -162,6 +192,37 @@ export function ChatUI({ sessionId }: ChatUIProps) {
       }
     },
     [agent, isStreaming, sessionId]
+  );
+
+  const handleEditUserMessage = useCallback((text: string) => {
+    setInput(text);
+    autoScrollRef.current = true;
+    requestAnimationFrame(() => {
+      composerTextareaRef.current?.focus();
+      composerTextareaRef.current?.setSelectionRange(text.length, text.length);
+      composerTextareaRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }, []);
+
+  const handleRetryUserMessage = useCallback(
+    async (messageIndex: number, text: string) => {
+      const t = text.trim();
+      if (!t || !agent || isStreaming) return;
+      if (hydratedSessionRef.current !== sessionId) return;
+
+      autoScrollRef.current = true;
+      setInput("");
+
+      try {
+        agent.abort();
+        agent.replaceMessages(messages.slice(0, messageIndex));
+        syncAgentState(agent);
+        await agent.prompt(t);
+      } catch (error) {
+        console.error(error);
+      }
+    },
+    [agent, isStreaming, messages, sessionId, syncAgentState]
   );
 
   useEffect(() => {
@@ -189,15 +250,34 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     };
   }, [agent, messages, sessionId, touchWorkspaceRevision]);
 
-  const handleModelSelect = useCallback(() => {
-    const a = getAgent();
-    if (!a?.state?.model) return;
-    const dialog = createCustomModelSelector(a.state.model, (model) => {
-      a.setModel(model);
-      syncAgentState(a);
-    });
-    document.body.appendChild(dialog);
-  }, [syncAgentState]);
+  const handleModelSelect = useCallback(async () => {
+    if (!enabledModels.length && !isLoadingModels) {
+      setIsLoadingModels(true);
+      try {
+        setEnabledModels(await getEnabledModels());
+      } catch (error) {
+        console.error("Failed to load enabled models:", error);
+      } finally {
+        setIsLoadingModels(false);
+      }
+    }
+    setModelMenuOpen((open) => !open);
+  }, [enabledModels.length, isLoadingModels]);
+
+  const handleSelectModelOption = useCallback(
+    async (providerId: string, modelId: string) => {
+      if (!agent) return;
+      try {
+        const model = await getModelForProvider(providerId, modelId);
+        agent.setModel(model);
+        syncAgentState(agent);
+        setModelMenuOpen(false);
+      } catch (error) {
+        console.error("Failed to select model:", error);
+      }
+    },
+    [agent, syncAgentState]
+  );
 
   const handleOpenArtifact = useCallback((filename: string) => {
     setActiveArtifact(filename);
@@ -261,18 +341,72 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     <div className="relative flex h-full flex-1 min-w-0">
       {/* Chat column */}
       <div
-        className={cn("flex h-full flex-col flex-1 min-w-0", CHAT_FONT_CLASS[chatFont])}
+        className={cn("chat-column-shell flex h-full min-w-0 flex-1 flex-col", CHAT_FONT_CLASS[chatFont])}
         style={{ minHeight: 0 }}
       >
-        <div className="flex shrink-0 items-center justify-between border-b border-sidebar-soft px-4 py-3">
-          <span className="text-sm text-sidebar-muted truncate">
-            {currentModel?.name ?? "No model"}
-          </span>
+        <div className="chat-topbar flex shrink-0 items-center justify-between border-b border-sidebar-soft px-4 py-3">
+          <div ref={modelMenuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                void handleModelSelect();
+              }}
+              className="inline-flex max-w-[min(26rem,72vw)] items-center gap-2 rounded-full bg-sidebar-panel px-3 py-1.5 text-sm text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar"
+              title={currentModel?.id ?? "No model"}
+              aria-expanded={modelMenuOpen}
+            >
+              <Sparkles className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{currentModel?.id ?? "No model"}</span>
+              <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 transition-transform", modelMenuOpen && "rotate-180")} />
+            </button>
+            {modelMenuOpen ? (
+              <div className="absolute left-0 top-full z-40 mt-2 w-[min(30rem,80vw)] overflow-hidden rounded-2xl border border-sidebar-soft bg-sidebar-panel-strong shadow-xl backdrop-blur-xl">
+                <div className="border-b border-sidebar-soft px-3 py-2 text-xs uppercase tracking-[0.14em] text-sidebar-muted">
+                  Select model
+                </div>
+                <div className="max-h-80 overflow-y-auto p-2">
+                  {isLoadingModels ? (
+                    <div className="px-3 py-3 text-sm text-sidebar-muted">Loading models…</div>
+                  ) : enabledModels.length === 0 ? (
+                    <div className="px-3 py-3 text-sm text-sidebar-muted">No enabled models</div>
+                  ) : (
+                    enabledModels.map((modelOption) => {
+                      const isCurrent =
+                        currentModel?.provider === modelOption.providerId &&
+                        currentModel?.id === modelOption.modelId;
+
+                      return (
+                        <button
+                          key={`${modelOption.providerId}:${modelOption.modelId}`}
+                          type="button"
+                          onClick={() => {
+                            void handleSelectModelOption(modelOption.providerId, modelOption.modelId);
+                          }}
+                          className={cn(
+                            "flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+                            isCurrent
+                              ? "bg-accent/10 text-sidebar"
+                              : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
+                          )}
+                        >
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium">{modelOption.modelId}</div>
+                            <div className="mt-0.5 text-xs text-sidebar-muted">{modelOption.providerId}</div>
+                          </div>
+                          {isCurrent ? <Check className="h-4 w-4 shrink-0 text-accent" /> : null}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div
           ref={scrollContainerRef}
-          className="flex-1 overflow-y-auto min-h-0"
+          className="chat-scroll-region min-h-0 flex-1 overflow-y-auto"
           onScroll={() => {
             const el = scrollContainerRef.current;
             if (!el) return;
@@ -281,35 +415,39 @@ export function ChatUI({ sessionId }: ChatUIProps) {
             autoScrollRef.current = nearBottom;
           }}
         >
-          <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-5 pb-2">
-            {messages.length === 0 && !streamMessage && (
-              <p className="py-8 text-center text-sm text-sidebar-muted">
-                Send a message to start.
-              </p>
-            )}
-            <MessageList
-              messages={messages}
-              tools={tools}
+          <div className="mx-auto w-full max-w-3xl px-4 pt-5 pb-3">
+            <div className="flex flex-col gap-5 px-1 py-3 sm:px-2">
+              {messages.length === 0 && !streamMessage && (
+                <p className="chat-empty-state rounded-[1.5rem] px-5 py-8 text-center text-sm text-sidebar-muted">
+                  Send a message to start.
+                </p>
+              )}
+              <MessageList
+                messages={messages}
+                tools={tools}
               pendingToolCalls={pendingToolCalls}
               isStreaming={isStreaming}
               onOpenArtifact={handleOpenArtifact}
+              onEditUserMessage={handleEditUserMessage}
+              onRetryUserMessage={handleRetryUserMessage}
             />
-            {isStreaming && (
-              <StreamingMessageContainer
-                message={streamMessage}
-                tools={tools}
-                isStreaming={isStreaming}
-                pendingToolCalls={pendingToolCalls}
-                toolResultsById={toolResultsById}
-                onOpenArtifact={handleOpenArtifact}
-              />
-            )}
-            <div ref={messagesEndRef} />
+              {isStreaming && (
+                <StreamingMessageContainer
+                  message={streamMessage}
+                  tools={tools}
+                  isStreaming={isStreaming}
+                  pendingToolCalls={pendingToolCalls}
+                  toolResultsById={toolResultsById}
+                  onOpenArtifact={handleOpenArtifact}
+                />
+              )}
+              <div ref={messagesEndRef} />
+            </div>
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-sidebar-soft bg-sidebar-panel">
-          <div className="max-w-3xl mx-auto px-2 pt-2">
+        <div className="chat-composer-dock shrink-0 border-t border-sidebar-soft">
+          <div className="mx-auto max-w-3xl px-4 pb-4 pt-3">
             <MessageEditor
               value={input}
               onChange={setInput}
@@ -322,10 +460,10 @@ export function ChatUI({ sessionId }: ChatUIProps) {
               }}
               onSend={handleSend}
               onAbort={() => agent.abort()}
-              onModelSelect={handleModelSelect}
               placeholder="Type a message…"
+              textareaRef={composerTextareaRef}
             />
-            <div className="flex items-center justify-end h-5 py-1">
+            <div className="flex h-6 items-center justify-end px-2 py-1">
               {usageText ? (
                 <span className="text-xs text-sidebar-muted">{usageText}</span>
               ) : (

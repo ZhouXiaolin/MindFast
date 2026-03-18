@@ -8,8 +8,9 @@ interface MessageListProps {
   tools?: AgentTool[];
   pendingToolCalls?: Set<string>;
   isStreaming?: boolean;
-  onCostClick?: () => void;
   onOpenArtifact?: (filename: string) => void;
+  onEditUserMessage?: (content: string) => void;
+  onRetryUserMessage?: (messageIndex: number, content: string) => void;
 }
 
 export function MessageList({
@@ -17,8 +18,9 @@ export function MessageList({
   tools = [],
   pendingToolCalls,
   isStreaming = false,
-  onCostClick,
   onOpenArtifact,
+  onEditUserMessage,
+  onRetryUserMessage,
 }: MessageListProps) {
   const toolResultsById = new Map<string, ToolResultMessage>();
   for (const m of messages) {
@@ -31,12 +33,19 @@ export function MessageList({
   const items: React.ReactNode[] = [];
   let index = 0;
 
-  for (const msg of messages) {
+  for (const [messageIndex, msg] of messages.entries()) {
     const role = (msg as { role: string }).role;
     if (role === "artifact") continue;
 
     if (role === "user" || role === "user-with-attachments") {
-      items.push(<UserMessage key={`msg-${index}`} message={msg as any} />);
+      items.push(
+        <UserMessage
+          key={`msg-${index}`}
+          message={msg as any}
+          onEdit={onEditUserMessage}
+          onRetry={(content) => onRetryUserMessage?.(messageIndex, content)}
+        />
+      );
       index++;
     } else if (msg.role === "assistant") {
       const amsg = msg as AssistantMessageType;
@@ -49,7 +58,6 @@ export function MessageList({
           toolResultsById={toolResultsById}
           isStreaming={false}
           hidePendingToolCalls={isStreaming}
-          onCostClick={onCostClick}
           onOpenArtifact={onOpenArtifact}
         />
       );
@@ -57,5 +65,5 @@ export function MessageList({
     }
   }
 
-  return <div className="flex flex-col gap-3">{items}</div>;
+  return <div className="flex flex-col gap-5">{items}</div>;
 }

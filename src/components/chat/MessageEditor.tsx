@@ -1,7 +1,8 @@
 import type { Model } from "@mariozechner/pi-ai";
 import type { ThinkingLevel } from "@mariozechner/pi-agent-core";
+import type { RefObject } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Brain, Send, Sparkles, Square } from "lucide-react";
+import { Brain, Send, Square } from "lucide-react";
 import { cn } from "../../lib/cn";
 
 const THINKING_OPTIONS: { value: ThinkingLevel; label: string }[] = [
@@ -21,8 +22,8 @@ interface MessageEditorProps {
   onThinkingChange?: (level: ThinkingLevel) => void;
   onSend: (input: string) => void;
   onAbort?: () => void;
-  onModelSelect?: () => void;
   placeholder?: string;
+  textareaRef?: RefObject<HTMLTextAreaElement | null>;
 }
 
 export function MessageEditor({
@@ -34,8 +35,8 @@ export function MessageEditor({
   onThinkingChange,
   onSend,
   onAbort,
-  onModelSelect,
   placeholder = "Type a message…",
+  textareaRef,
 }: MessageEditorProps) {
   const supportsThinking = (currentModel as { reasoning?: boolean } | undefined)?.reasoning === true;
 
@@ -60,28 +61,54 @@ export function MessageEditor({
     <form
       onSubmit={handleSubmit}
       className={cn(
-        "rounded-xl border border-sidebar bg-sidebar shadow-sm",
+        "chat-composer-frame rounded-[1.5rem]",
         "focus-within:ring-1 focus-within:ring-accent"
       )}
     >
-      <textarea
-        className="w-full resize-none overflow-y-auto bg-transparent px-4 py-3 text-sidebar placeholder-sidebar-muted outline-none"
-        placeholder={placeholder}
-        rows={1}
-        style={{ minHeight: "1.5rem", maxHeight: "200px" }}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={handleKeyDown}
-        disabled={isStreaming}
-      />
-      <div className="flex items-center justify-between gap-2 px-2 pb-2">
+      <div className="flex items-end gap-3 px-3 pt-3">
+        <textarea
+          ref={textareaRef}
+          className="min-h-[3.5rem] flex-1 resize-none overflow-y-auto bg-transparent px-2 pt-1 pb-2 text-[0.95rem] leading-7 text-sidebar placeholder-sidebar-muted outline-none"
+          placeholder={placeholder}
+          rows={1}
+          style={{ minHeight: "1.5rem", maxHeight: "200px" }}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          disabled={isStreaming}
+        />
+        <div className="flex shrink-0 items-center pb-2">
+          {isStreaming ? (
+            <button
+              type="button"
+              onClick={onAbort}
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-semantic-error/30 bg-semantic-error/10 text-semantic-error transition-opacity hover:opacity-90"
+              aria-label="Stop"
+            >
+              <Square className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!value.trim()}
+              className="flex h-10 min-w-10 items-center justify-center rounded-full bg-accent px-3 text-accent-foreground transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-45"
+              aria-label="Send"
+            >
+              <span style={{ transform: "rotate(-45deg)" }}>
+                <Send className="h-4 w-4" />
+              </span>
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-2 border-t border-sidebar-soft px-3 pt-2 pb-3">
         <div className="flex items-center gap-1">
           {supportsThinking && onThinkingChange && (
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
                 <button
                   type="button"
-                  className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
+                  className="flex items-center gap-1 rounded-full bg-sidebar-panel px-3 py-1.5 text-xs text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar"
                 >
                   <Brain className="h-3.5 w-3.5" />
                   <span>{THINKING_OPTIONS.find((o) => o.value === thinkingLevel)?.label ?? "Off"}</span>
@@ -89,7 +116,7 @@ export function MessageEditor({
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>
                 <DropdownMenu.Content
-                  className="min-w-[120px] rounded-lg border border-sidebar bg-sidebar py-1 shadow-lg"
+                  className="min-w-[120px] rounded-2xl border border-sidebar-soft bg-sidebar-panel-strong py-1 shadow-lg"
                   sideOffset={4}
                 >
                   {THINKING_OPTIONS.map((opt) => (
@@ -104,42 +131,6 @@ export function MessageEditor({
                 </DropdownMenu.Content>
               </DropdownMenu.Portal>
             </DropdownMenu.Root>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {currentModel && onModelSelect && (
-            <button
-              type="button"
-              onClick={() => {
-                requestAnimationFrame(() => onModelSelect());
-              }}
-              className="flex items-center gap-1 truncate rounded-lg px-2 py-1.5 text-xs text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar max-w-[140px]"
-              title={currentModel.name}
-            >
-              <Sparkles className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{currentModel.id}</span>
-            </button>
-          )}
-          {isStreaming ? (
-            <button
-              type="button"
-              onClick={onAbort}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
-              aria-label="Stop"
-            >
-              <Square className="h-4 w-4" />
-            </button>
-          ) : (
-            <button
-              type="submit"
-              disabled={!value.trim()}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar disabled:opacity-50 disabled:pointer-events-none"
-              aria-label="Send"
-            >
-              <span style={{ transform: "rotate(-45deg)" }}>
-                <Send className="h-4 w-4" />
-              </span>
-            </button>
           )}
         </div>
       </div>

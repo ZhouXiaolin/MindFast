@@ -47,6 +47,10 @@
     --semantic-success: #059669;
   }
   body {
+    --chat-shell: color-mix(in srgb, var(--sidebar-bg) 76%, var(--app-bg));
+    --chat-composer: color-mix(in srgb, var(--sidebar-panel-strong) 58%, var(--sidebar-bg));
+    --chat-composer-border: color-mix(in srgb, var(--sidebar-border) 90%, transparent);
+    --chat-assistant-rail: color-mix(in srgb, var(--accent) 24%, var(--sidebar-soft));
     background-color: var(--app-bg);
     color: var(--sidebar-fg);
     -webkit-font-smoothing: antialiased;
@@ -140,12 +144,74 @@
   border-radius: 999px;
 }
 
-.user-message-container {
-  position: relative;
+.chat-column-shell {
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--accent) 13%, transparent), color-mix(in srgb, var(--accent) 8%, transparent)),
-    var(--sidebar-panel);
-  border: 1px solid var(--sidebar-soft);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--sidebar-fg) 0.06, transparent);
-  backdrop-filter: blur(16px);
+    radial-gradient(circle at top center, color-mix(in srgb, var(--accent) 5%, transparent), transparent 38%),
+    linear-gradient(180deg, color-mix(in srgb, var(--sidebar-panel) 28%, transparent), transparent 32%),
+    var(--chat-shell);
+}
+
+.chat-topbar {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--sidebar-panel-strong) 72%, transparent), transparent);
+  backdrop-filter: blur(14px);
+}
+
+.chat-scroll-region {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--sidebar-panel) 44%, transparent), transparent 20%),
+    linear-gradient(0deg, color-mix(in srgb, var(--sidebar-bg) 82%, transparent), transparent 22%);
+}
+
+.chat-empty-state {
+  border: 1px dashed color-mix(in srgb, var(--sidebar-border) 88%, transparent);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 6%, transparent), transparent 58%),
+    color-mix(in srgb, var(--sidebar-panel) 80%, transparent);
+}
+
+.chat-composer-dock {
+  background:
+    linear-gradient(180deg, transparent, color-mix(in srgb, var(--sidebar-panel) 34%, transparent) 18%, color-mix(in srgb, var(--sidebar-bg) 88%, var(--app-bg)));
+}
+
+.chat-composer-frame {
+  background: var(--chat-composer);
+  border: 1px solid var(--chat-composer-border);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--sidebar-fg) 5%, transparent),
+    0 14px 30px color-mix(in srgb, var(--app-bg) 18%, transparent);
+  backdrop-filter: blur(18px);
+}
+
+.assistant-message-container {
+  position: relative;
+  padding-left: 1rem;
+}
+
+.assistant-message-container::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  width: 1px;
+  background:
+    linear-gradient(180deg, transparent, var(--chat-assistant-rail) 18%, var(--chat-assistant-rail) 82%, transparent);
+}
+
+.user-message-flow {
+  position: relative;
+  padding-right: 1rem;
+}
+
+.user-message-flow::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  width: 1px;
+  background:
+    linear-gradient(180deg, transparent, var(--chat-assistant-rail) 18%, var(--chat-assistant-rail) 82%, transparent);
 }
