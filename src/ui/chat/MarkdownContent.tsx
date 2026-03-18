@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { cn } from "../../utils/cn";
 import { CodeBlock } from "./CodeBlock";
+import { MermaidBlock } from "./MermaidBlock";
 
 interface MarkdownContentProps {
   content: string;
@@ -11,7 +12,7 @@ interface MarkdownContentProps {
 
 function getCodeLanguage(className?: string): string {
   const match = className?.match(/language-([\w-]+)/);
-  return match?.[1] ?? "text";
+  return match?.[1]?.toLowerCase() ?? "text";
 }
 
 const markdownComponents: Components = {
@@ -54,10 +55,15 @@ const markdownComponents: Components = {
   em: ({ children }) => <em className="italic text-sidebar">{children}</em>,
   code: ({ className, children }) => {
     const text = String(children).replace(/\n$/, "");
+    const language = getCodeLanguage(className);
     const isBlock = !!className?.includes("language-") || text.includes("\n");
 
     if (isBlock) {
-      return <CodeBlock code={text} language={getCodeLanguage(className)} className="my-4" />;
+      if (language === "mermaid") {
+        return <MermaidBlock chart={text} className="my-4" />;
+      }
+
+      return <CodeBlock code={text} language={language} className="my-4" />;
     }
 
     return (

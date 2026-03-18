@@ -30,6 +30,7 @@
     "jszip": "^3.10.1",
     "lucide-react": "^0.577.0",
     "mathjax": "^4.1.1",
+    "mermaid": "^11.13.0",
     "pdfjs-dist": "^5.5.207",
     "rbush": "^4.0.1",
     "react": "^19.1.0",
