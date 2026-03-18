@@ -10,14 +10,14 @@ import {
   CustomProvidersStore,
   setAppStorage,
 } from "./storage";
-import { defaultConvertToLlm } from "./convertToLlm";
-import { getApiKeyPromptHandler } from "./apiKeyPrompt";
+import { defaultConvertToLlm } from "../ai/convert";
+import { getApiKeyPromptHandler } from "../ai/api-key-prompt";
 import { EnabledProvidersStore, ModelsStore, EnabledModelsStore } from "./stores";
-import { isKnownProvider } from "../config/commonProviderModels";
-import { getCustomProviderModels } from "../config/commonProviderModels";
-import "./artifacts/types";
-import { ArtifactsStore } from "./artifacts/store";
-import { createArtifactsTool } from "./artifacts/tool";
+import { isKnownProvider } from "../ai/providers";
+import { getCustomProviderModels } from "../ai/providers";
+import "../ai/artifacts/types";
+import { ArtifactsStore } from "../ai/artifacts/store";
+import { createArtifactsTool } from "../ai/artifacts/tool";
 
 const DB_NAME = "mindfast-pi";
 const DB_VERSION = 2;
