@@ -8,6 +8,7 @@ import { PdfArtifact } from "./PdfArtifact";
 import { DocxArtifact } from "./DocxArtifact";
 import { ExcelArtifact } from "./ExcelArtifact";
 import { JavaScriptArtifact } from "./JavaScriptArtifact";
+import { PythonArtifact } from "./PythonArtifact";
 import { TextArtifact } from "./TextArtifact";
 import { GenericArtifact } from "./GenericArtifact";
 
@@ -20,6 +21,7 @@ const RENDERERS: Record<string, React.ComponentType<ArtifactRendererProps>> = {
   docx: DocxArtifact,
   excel: ExcelArtifact,
   javascript: JavaScriptArtifact,
+  python: PythonArtifact,
   text: TextArtifact,
   generic: GenericArtifact,
 };

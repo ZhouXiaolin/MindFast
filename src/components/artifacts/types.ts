@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type ArtifactFileType = "html" | "svg" | "markdown" | "image" | "pdf" | "excel" | "docx" | "javascript" | "text" | "generic";
+export type ArtifactFileType = "html" | "svg" | "markdown" | "image" | "pdf" | "excel" | "docx" | "javascript" | "python" | "text" | "generic";
 
 export interface ArtifactRendererProps {
   filename: string;
@@ -26,9 +26,10 @@ export function getFileType(filename: string): ArtifactFileType {
     ext === "webp" || ext === "bmp" || ext === "ico"
   ) return "image";
   if (ext === "js") return "javascript";
+  if (ext === "py") return "python";
   if ([
     "txt", "json", "xml", "yaml", "yml", "csv",
-    "ts", "jsx", "tsx", "py", "java", "c", "cpp", "h",
+    "ts", "jsx", "tsx", "java", "c", "cpp", "h",
     "css", "scss", "sass", "less", "sh", "go", "rs", "rb",
     "swift", "kt", "sql", "r", "lua", "perl", "vue", "svelte", "toml",
   ].includes(ext || "")) return "text";
