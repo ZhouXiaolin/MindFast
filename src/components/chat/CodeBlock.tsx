@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+import hljs from "highlight.js";
 import { cn } from "../../lib/cn";
 
 interface CodeBlockProps {
@@ -7,6 +9,23 @@ interface CodeBlockProps {
 }
 
 export function CodeBlock({ code, language = "text", className }: CodeBlockProps) {
+  const codeRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!codeRef.current) return;
+    codeRef.current.removeAttribute("data-highlighted");
+    try {
+      if (language && language !== "text" && hljs.getLanguage(language)) {
+        const result = hljs.highlight(code, { language, ignoreIllegals: true });
+        codeRef.current.innerHTML = result.value;
+      } else {
+        codeRef.current.textContent = code;
+      }
+    } catch {
+      codeRef.current.textContent = code;
+    }
+  }, [code, language]);
+
   return (
     <pre
       className={cn(
@@ -15,7 +34,15 @@ export function CodeBlock({ code, language = "text", className }: CodeBlockProps
       )}
       data-language={language}
     >
-      <code className="block whitespace-pre-wrap break-words">{code}</code>
+      <code
+        ref={codeRef}
+        className={cn(
+          "block whitespace-pre-wrap break-words",
+          language !== "text" && `hljs language-${language}`
+        )}
+      >
+        {code}
+      </code>
     </pre>
   );
 }

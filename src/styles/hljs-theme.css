@@ -1,0 +1,69 @@
+/* highlight.js theme aligned with MindFast sidebar tokens */
+.hljs {
+  color: var(--sidebar-fg, #e5e7eb);
+  background: transparent;
+}
+.hljs-comment,
+.hljs-quote {
+  color: var(--sidebar-muted, #6b7280);
+  font-style: italic;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-type {
+  color: #c678dd;
+}
+.hljs-string,
+.hljs-template-tag,
+.hljs-addition {
+  color: #98c379;
+}
+.hljs-number,
+.hljs-literal,
+.hljs-variable,
+.hljs-template-variable {
+  color: #d19a66;
+}
+.hljs-built_in,
+.hljs-title,
+.hljs-section {
+  color: #61afef;
+}
+.hljs-attr,
+.hljs-attribute {
+  color: #d19a66;
+}
+.hljs-name,
+.hljs-tag {
+  color: #e06c75;
+}
+.hljs-function .hljs-title,
+.hljs-title.function_ {
+  color: #61afef;
+}
+.hljs-params {
+  color: var(--sidebar-fg, #e5e7eb);
+}
+.hljs-deletion {
+  color: #e06c75;
+}
+.hljs-meta {
+  color: #61afef;
+}
+.hljs-regexp {
+  color: #56b6c2;
+}
+.hljs-symbol,
+.hljs-bullet {
+  color: #56b6c2;
+}
+.hljs-link {
+  color: #61afef;
+  text-decoration: underline;
+}
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: bold;
+}

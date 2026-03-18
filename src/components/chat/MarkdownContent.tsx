@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import { cn } from "../../lib/cn";
 import { CodeBlock } from "./CodeBlock";
@@ -80,13 +81,62 @@ const markdownComponents: Components = {
   td: ({ children }) => <td className="border-t border-sidebar-soft px-3 py-2 align-top">{children}</td>,
 };
 
+let mathjaxLoadPromise: Promise<void> | null = null;
+
+function ensureMathJax(): Promise<void> {
+  if ((window as any).MathJax?.typesetPromise) return Promise.resolve();
+  if (mathjaxLoadPromise) return mathjaxLoadPromise;
+
+  mathjaxLoadPromise = new Promise((resolve) => {
+    (window as any).MathJax = {
+      tex: {
+        inlineMath: [["$", "$"], ["\\(", "\\)"]],
+        displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+      },
+      svg: { fontCache: "global" },
+      startup: {
+        ready: () => {
+          (window as any).MathJax.startup.defaultReady();
+          resolve();
+        },
+      },
+    };
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js";
+    script.async = true;
+    document.head.appendChild(script);
+  });
+  return mathjaxLoadPromise;
+}
+
+function hasMath(content: string): boolean {
+  return /\$\$[\s\S]+?\$\$|\$[^\s$].*?[^\s$]\$|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\]/.test(content);
+}
+
 export function MarkdownContent({
   content,
   className,
   tone = "default",
 }: MarkdownContentProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentHasMath = hasMath(content);
+
+  useEffect(() => {
+    if (!contentHasMath || !containerRef.current) return;
+    let cancelled = false;
+    ensureMathJax().then(() => {
+      if (cancelled || !containerRef.current) return;
+      const MJ = (window as any).MathJax;
+      if (MJ?.typesetPromise) {
+        MJ.typesetPromise([containerRef.current]).catch(() => {});
+      }
+    });
+    return () => { cancelled = true; };
+  }, [content, contentHasMath]);
+
   return (
     <div
+      ref={containerRef}
       className={cn(
         "max-w-none break-words text-sm",
         tone === "muted" ? "text-sidebar-muted" : "text-sidebar",
