@@ -133,16 +133,24 @@ export function buildSessionMetadata(
   existingMetadata?: SessionMetadata | null
 ): SessionMetadata {
   const messages = state.messages ?? [];
+  const title = buildSessionTitle(messages);
+  const messageCount = messages.filter((message) => message.role === "user" || message.role === "assistant").length;
+  const preview = buildSessionPreview(messages);
+  const contentUnchanged =
+    existingMetadata &&
+    existingMetadata.messageCount === messageCount &&
+    existingMetadata.title === title &&
+    existingMetadata.preview === preview;
 
   return {
     id: sessionId,
-    title: buildSessionTitle(messages),
+    title,
     createdAt: existingMetadata?.createdAt ?? new Date().toISOString(),
-    lastModified: new Date().toISOString(),
-    messageCount: messages.filter((message) => message.role === "user" || message.role === "assistant").length,
+    lastModified: contentUnchanged ? existingMetadata.lastModified : new Date().toISOString(),
+    messageCount,
     usage: buildUsage(messages),
     thinkingLevel: state.thinkingLevel ?? existingMetadata?.thinkingLevel ?? "off",
-    preview: buildSessionPreview(messages),
+    preview,
   };
 }
 

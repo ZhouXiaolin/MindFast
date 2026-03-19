@@ -16,7 +16,9 @@ import {
   Code,
   PanelLeftClose,
   PanelLeft,
-  Palette,
+  Sun,
+  Moon,
+  Contrast,
   Settings,
 } from "lucide-react";
 
@@ -184,7 +186,13 @@ export function Layout() {
               aria-label={t("theme")}
               title={t(resolvedTheme === "dark" ? "colorModeLight" : "colorModeDark")}
             >
-              <Palette className="h-5 w-5 shrink-0" />
+              {colorMode === "light" ? (
+                <Sun className="h-5 w-5 shrink-0" />
+              ) : colorMode === "dark" ? (
+                <Moon className="h-5 w-5 shrink-0" />
+              ) : (
+                <Contrast className="h-5 w-5 shrink-0" />
+              )}
               {sidebarOpen && (
                 <span className="min-w-0 flex-1 truncate">
                   {t(colorMode === "light" ? "colorModeLight" : colorMode === "dark" ? "colorModeDark" : "colorModeAuto")}
