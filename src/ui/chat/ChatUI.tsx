@@ -12,6 +12,11 @@ import { useChatUsage } from "./useChatUsage";
 import { useArtifactsPanel } from "./useArtifactsPanel";
 import { ChatModelPicker } from "./ChatModelPicker";
 import { ChatArtifactsPanel } from "./ChatArtifactsPanel";
+import { useSubagentTasks } from "./useSubagentTasks";
+import { useSubagentPanel } from "./useSubagentPanel";
+import { ChatSubagentsPanel } from "./ChatSubagentsPanel";
+import { setSubagentCallbacks } from "./tools";
+import { useSubtaskRuns } from "./useSubtaskRuns";
 
 interface ChatUIProps {
   sessionId: string;
@@ -66,6 +71,30 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     selectArtifact,
     showArtifactsPanel,
   } = useArtifactsPanel(artifactsList);
+
+  const pendingToolCalls = agent?.state.pendingToolCalls ?? new Set<string>();
+  const subtaskRuns = useSubtaskRuns();
+  const {
+    tasks: subagentTasks,
+    hasSubagentTasks,
+    hasRunningSubagents,
+    getStatus: getSubtaskStatus,
+  } = useSubagentTasks(messages, pendingToolCalls, subtaskRuns);
+  const {
+    showSubagentsPanel,
+    selectedTaskId,
+    selectedTask,
+    closePanel: closeSubagentPanel,
+    selectTask: selectSubagentTask,
+  } = useSubagentPanel(subagentTasks);
+
+  useEffect(() => {
+    setSubagentCallbacks(
+      (id: string) => selectSubagentTask(id),
+      getSubtaskStatus
+    );
+    return () => setSubagentCallbacks(undefined, undefined);
+  }, [selectSubagentTask, getSubtaskStatus]);
 
   const scrollToBottom = useCallback(() => {
     if (!autoScrollRef.current) return;
@@ -151,7 +180,6 @@ export function ChatUI({ sessionId }: ChatUIProps) {
   }
 
   const tools = agent?.state.tools ?? [];
-  const pendingToolCalls = agent?.state.pendingToolCalls ?? new Set<string>();
 
   if (!agent) {
     return (
@@ -266,7 +294,15 @@ export function ChatUI({ sessionId }: ChatUIProps) {
                 placeholder="Type a message…"
                 textareaRef={composerTextareaRef}
               />
-              <div className="flex h-6 items-center justify-end px-2 py-1">
+              <div className="flex h-6 items-center justify-between px-2 py-1">
+                {hasRunningSubagents ? (
+                  <span className="flex items-center gap-1.5 text-xs text-accent">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-accent" />
+                    Waiting for subtasks…
+                  </span>
+                ) : (
+                  <span />
+                )}
                 {usageText ? (
                   <span className="text-xs text-sidebar-muted">{usageText}</span>
                 ) : (
@@ -278,7 +314,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
         ) : null}
       </div>
 
-      {hasArtifacts ? (
+      {hasArtifacts && !showSubagentsPanel ? (
         <ChatArtifactsPanel
           artifactsList={artifactsList}
           selectedArtifact={selectedArtifact}
@@ -287,6 +323,18 @@ export function ChatUI({ sessionId }: ChatUIProps) {
           onClosePanel={closePanel}
           onOpenPanel={openPanel}
           onSelectArtifact={selectArtifact}
+        />
+      ) : null}
+
+      {hasSubagentTasks ? (
+        <ChatSubagentsPanel
+          tasks={subagentTasks}
+          selectedTaskId={selectedTaskId}
+          selectedTask={selectedTask}
+          showPanel={showSubagentsPanel}
+          onClosePanel={closeSubagentPanel}
+          onSelectTask={selectSubagentTask}
+          tools={tools}
         />
       ) : null}
     </div>

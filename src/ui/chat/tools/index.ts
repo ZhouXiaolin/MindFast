@@ -1,9 +1,12 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import type { ArtifactsParams } from "../../../ai/artifacts/types";
 import type { WidgetParamsSchema } from "../../../ai/widget/tool";
+import type { SubtasksToolParams } from "../../../ai/subagent-types";
+import { SUBAGENT_TOOL_NAME } from "../../../ai/subagent-types";
 import { renderDefaultTool } from "./DefaultRenderer";
 import { renderArtifactsTool } from "./ArtifactsToolRenderer";
 import { renderWidgetTool } from "./WidgetToolRenderer";
+import { renderSubagentTool } from "./SubagentToolRenderer";
 import { registerToolRenderer, getToolRenderer } from "./registry";
 import type { ToolRenderResult } from "./types";
 
@@ -11,6 +14,8 @@ export type { ToolRenderResult, ToolRenderer } from "./types";
 export { renderDefaultTool } from "./DefaultRenderer";
 export { renderArtifactsTool } from "./ArtifactsToolRenderer";
 export { renderWidgetTool } from "./WidgetToolRenderer";
+export { renderSubagentTool } from "./SubagentToolRenderer";
+export { setSubagentCallbacks } from "./SubagentToolRenderer";
 export { ArtifactPill } from "./ArtifactPill";
 export { registerToolRenderer, getToolRenderer } from "./registry";
 
@@ -44,6 +49,23 @@ registerToolRenderer("widget", {
     return renderWidgetTool(
       toolName,
       params as WidgetParamsSchema | undefined,
+      result,
+      isStreaming
+    );
+  },
+});
+
+registerToolRenderer(SUBAGENT_TOOL_NAME, {
+  render(
+    toolName: string,
+    params: unknown,
+    result: ToolResultMessage | undefined,
+    isStreaming?: boolean,
+    _onOpenArtifact?: (filename: string) => void
+  ): ToolRenderResult {
+    return renderSubagentTool(
+      toolName,
+      params as SubtasksToolParams | undefined,
       result,
       isStreaming
     );
