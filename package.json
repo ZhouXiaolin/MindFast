@@ -41,6 +41,7 @@
     "react-router-dom": "^7.13.1",
     "remark-gfm": "^4.0.1",
     "tailwindcss": "^4.2.1",
+    "tiktoken": "^1.0.22",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zustand": "^5.0.12"
   },

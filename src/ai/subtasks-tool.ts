@@ -5,12 +5,14 @@ import type { ExtendedAppStorage } from "../stores/init";
 import { defaultConvertToLlm } from "./convert";
 import { ArtifactsStore } from "./artifacts/store";
 import { createArtifactsTool } from "./artifacts/tool";
+import { once } from "./once";
 import {
   type Subtask,
   type SubtasksToolParams,
   SUBAGENT_TOOL_NAME,
 } from "./subagent-types";
 import { clearSubtaskRuns, upsertSubtaskRun } from "./subtasks-runtime";
+import { countTextTokens } from "./tiktoken";
 
 const subtasksParamsSchema = Type.Object({
   subtasks: Type.Array(
@@ -33,6 +35,14 @@ const SUBTASKS_TOOL_DESCRIPTION = [
   "Each prompt must be complete and independent.",
 ].join(" ");
 
+const MAX_SUBTASK_RETURN_TOKENS = 200;
+const SUBTASK_SUMMARY_SYSTEM_PROMPT = [
+  "You compress a subtask result for a parent agent.",
+  "Return plain text only.",
+  "Keep exact file paths, function names, errors, counts, and the final conclusion when present.",
+  `Keep the answer within ${MAX_SUBTASK_RETURN_TOKENS} tokens.`,
+].join(" ");
+
 function cloneMessage<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -48,23 +58,75 @@ function mergeUniqueSubtasks(subtasks: Subtask[]): Subtask[] {
   return result;
 }
 
+function extractAssistantText(message: AgentMessage): string {
+  if (message.role !== "assistant") return "";
+  const content = (message as { role: string; content: unknown }).content;
+
+  if (typeof content === "string") {
+    return content.trim();
+  }
+
+  if (!Array.isArray(content)) {
+    return "";
+  }
+
+  return content
+    .filter((part): part is { type: "text"; text?: string } => {
+      return typeof part === "object" && part !== null && (part as { type?: string }).type === "text";
+    })
+    .map((part) => part.text?.trim() ?? "")
+    .filter(Boolean)
+    .join("\n\n")
+    .trim();
+}
+
 function extractLastAssistantText(messages: AgentMessage[]): string {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];
-    if (msg.role !== "assistant") continue;
-    const content = (msg as { role: string; content: unknown }).content;
-    if (typeof content === "string" && content.trim()) {
-      return content.trim().slice(0, 300);
-    }
-    if (Array.isArray(content)) {
-      for (const part of content as Array<{ type: string; text?: string }>) {
-        if (part.type === "text" && part.text?.trim()) {
-          return part.text.trim().slice(0, 300);
-        }
-      }
-    }
+    const text = extractAssistantText(msg);
+    if (text) return text;
   }
   return "";
+}
+
+async function summarizeSubtaskResult(
+  text: string,
+  childAgent: Agent,
+  storage: ExtendedAppStorage,
+  signal?: AbortSignal
+): Promise<{ text: string; tokenCount: number; summarizedFrom?: number }> {
+  const tokenCount = await countTextTokens(text);
+  if (tokenCount <= MAX_SUBTASK_RETURN_TOKENS) {
+    return { text, tokenCount };
+  }
+
+  let summarized = "";
+  try {
+    summarized = (await once({
+      model: childAgent.state.model,
+      thinkingLevel: childAgent.state.thinkingLevel,
+      systemPrompt: SUBTASK_SUMMARY_SYSTEM_PROMPT,
+      prompt: `Summarize the following subtask result for the parent agent.\n\n${text}`,
+      maxTokens: MAX_SUBTASK_RETURN_TOKENS,
+      signal,
+      getApiKey: async (provider: string) => {
+        const key = await storage.providerKeys.get(provider);
+        return key ?? undefined;
+      },
+    })).trim();
+  } catch (error) {
+    console.warn("Failed to summarize subtask result, returning original text:", error);
+  }
+
+  if (!summarized) {
+    return { text, tokenCount };
+  }
+
+  return {
+    text: summarized,
+    tokenCount: await countTextTokens(summarized),
+    summarizedFrom: tokenCount,
+  };
 }
 
 export function createSubtasksTool(
@@ -88,7 +150,9 @@ export function createSubtasksTool(
       const subtasks = mergeUniqueSubtasks(args.subtasks as Subtask[]);
       clearSubtaskRuns(subtasks.map((st) => st.id));
 
-      const runOne = async (subtask: Subtask): Promise<{ ok: boolean; id: string; summary: string }> => {
+      const runOne = async (
+        subtask: Subtask
+      ): Promise<{ ok: boolean; id: string; summary: string; tokenCount: number; summarizedFrom?: number }> => {
         let childAgent: Agent | null = null;
         const artifactsStore = new ArtifactsStore();
         let unsubscribe: (() => void) | undefined;
@@ -146,8 +210,9 @@ export function createSubtasksTool(
 
           await childAgent.prompt(subtask.prompt);
           syncRunState();
-          const summary = extractLastAssistantText(childAgent.state.messages);
-          return { ok: true, id: subtask.id, summary };
+          const rawSummary = extractLastAssistantText(childAgent.state.messages);
+          const summary = await summarizeSubtaskResult(rawSummary, childAgent, storage, signal);
+          return { ok: true, id: subtask.id, summary: summary.text, tokenCount: summary.tokenCount, summarizedFrom: summary.summarizedFrom };
         } catch (error) {
           upsertSubtaskRun(subtask.id, {
             messages: childAgent?.state.messages.slice() ?? [],
@@ -156,7 +221,7 @@ export function createSubtasksTool(
             artifacts: [],
             error: error instanceof Error ? error.message : "Subtask failed",
           });
-          return { ok: false, id: subtask.id, summary: "" };
+          return { ok: false, id: subtask.id, summary: "", tokenCount: 0 };
         } finally {
           unsubscribe?.();
           abortListener?.();
@@ -172,7 +237,10 @@ export function createSubtasksTool(
         const task = subtasks.find((s) => s.id === r.id);
         const label = task?.label ?? r.id;
         if (r.ok) {
-          return `• ${label}: ${r.summary || "completed"}`;
+          const tokenText = r.summarizedFrom
+            ? `${r.tokenCount} tokens, summarized from ${r.summarizedFrom}`
+            : `${r.tokenCount} tokens`;
+          return `• ${label} (${tokenText}): ${r.summary || "completed"}`;
         }
         return `• ${label}: failed`;
       });
