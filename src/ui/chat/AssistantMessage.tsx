@@ -1,6 +1,7 @@
 import { Copy } from "lucide-react";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import type { AssistantMessage as AssistantMessageType, ToolResultMessage } from "@mariozechner/pi-ai";
+import { SUBAGENT_TOOL_NAME } from "../../ai/subagent-types";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolMessage } from "./ToolMessage";
 import { MarkdownContent } from "./MarkdownContent";
@@ -54,7 +55,12 @@ export function AssistantMessage({
       const tc = chunk as { id: string; name: string; arguments?: unknown };
       const pending = pendingToolCalls?.has(tc.id) ?? false;
       const result = toolResultsById?.get(tc.id);
-      if (hidePendingToolCalls && pending && !result) continue;
+      const shouldHidePendingToolCall =
+        hidePendingToolCalls &&
+        pending &&
+        !result &&
+        tc.name !== SUBAGENT_TOOL_NAME;
+      if (shouldHidePendingToolCall) continue;
       const tool = tools.find((t) => t.name === tc.name);
       const aborted =
         (message as { stopReason?: string }).stopReason === "aborted" && !result;

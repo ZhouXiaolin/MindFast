@@ -15,7 +15,7 @@ import { ChatArtifactsPanel } from "./ChatArtifactsPanel";
 import { useSubagentTasks } from "./useSubagentTasks";
 import { useSubagentPanel } from "./useSubagentPanel";
 import { ChatSubagentsPanel } from "./ChatSubagentsPanel";
-import { setSubagentCallbacks } from "./tools";
+import { SubagentToolProvider } from "./tools";
 import { useSubtaskRuns } from "./useSubtaskRuns";
 
 interface ChatUIProps {
@@ -78,7 +78,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     tasks: subagentTasks,
     hasSubagentTasks,
     hasRunningSubagents,
-    getStatus: getSubtaskStatus,
+    statusMap,
   } = useSubagentTasks(messages, pendingToolCalls, subtaskRuns);
   const {
     showSubagentsPanel,
@@ -87,14 +87,6 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     closePanel: closeSubagentPanel,
     selectTask: selectSubagentTask,
   } = useSubagentPanel(subagentTasks);
-
-  useEffect(() => {
-    setSubagentCallbacks(
-      (id: string) => selectSubagentTask(id),
-      getSubtaskStatus
-    );
-    return () => setSubagentCallbacks(undefined, undefined);
-  }, [selectSubagentTask, getSubtaskStatus]);
 
   const scrollToBottom = useCallback(() => {
     if (!autoScrollRef.current) return;
@@ -262,25 +254,30 @@ export function ChatUI({ sessionId }: ChatUIProps) {
           ) : (
             <div className="mx-auto w-full max-w-3xl px-4 pt-5 pb-3">
               <div className="flex flex-col gap-5 px-1 py-3 sm:px-2">
-                <MessageList
-                  messages={messages}
-                  tools={tools}
-                  pendingToolCalls={pendingToolCalls}
-                  isStreaming={isStreaming}
-                  onOpenArtifact={openArtifact}
-                  onEditUserMessage={handleEditUserMessage}
-                  onRetryUserMessage={handleRetryUserMessage}
-                />
-                {isStreaming && (
-                  <StreamingMessageContainer
-                    message={streamMessage}
+                <SubagentToolProvider
+                  statusMap={statusMap}
+                  onSelectSubagent={selectSubagentTask}
+                >
+                  <MessageList
+                    messages={messages}
                     tools={tools}
-                    isStreaming={isStreaming}
                     pendingToolCalls={pendingToolCalls}
-                    toolResultsById={toolResultsById}
+                    isStreaming={isStreaming}
                     onOpenArtifact={openArtifact}
+                    onEditUserMessage={handleEditUserMessage}
+                    onRetryUserMessage={handleRetryUserMessage}
                   />
-                )}
+                  {isStreaming && (
+                    <StreamingMessageContainer
+                      message={streamMessage}
+                      tools={tools}
+                      isStreaming={isStreaming}
+                      pendingToolCalls={pendingToolCalls}
+                      toolResultsById={toolResultsById}
+                      onOpenArtifact={openArtifact}
+                    />
+                  )}
+                </SubagentToolProvider>
                 <div ref={messagesEndRef} />
               </div>
             </div>

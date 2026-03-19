@@ -3,17 +3,7 @@ import { Loader2, CheckCircle2, XCircle, GitBranch } from "lucide-react";
 import type { SubtasksToolParams, Subtask, SubtaskStatus } from "../../../ai/subagent-types";
 import { cn } from "../../../utils/cn";
 import type { ToolRenderResult } from "./types";
-
-let _onSelectSubagent: ((id: string) => void) | undefined;
-let _getSubtaskStatus: ((id: string) => SubtaskStatus) | undefined;
-
-export function setSubagentCallbacks(
-  onSelect?: (id: string) => void,
-  getStatus?: (id: string) => SubtaskStatus
-) {
-  _onSelectSubagent = onSelect;
-  _getSubtaskStatus = getStatus;
-}
+import { useSubagentToolContext } from "./SubagentToolContext";
 
 function StatusIcon({ status }: { status: SubtaskStatus }) {
   switch (status) {
@@ -29,11 +19,12 @@ function StatusIcon({ status }: { status: SubtaskStatus }) {
 }
 
 function SubtaskLabel({ subtask }: { subtask: Subtask }) {
-  const status = _getSubtaskStatus?.(subtask.id) ?? "pending";
+  const { statusMap, onSelectSubagent } = useSubagentToolContext();
+  const status = statusMap.get(subtask.id) ?? "pending";
   return (
     <button
       type="button"
-      onClick={() => _onSelectSubagent?.(subtask.id)}
+      onClick={() => onSelectSubagent?.(subtask.id)}
       className={cn(
         "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
         "border border-sidebar-soft bg-sidebar-panel hover:bg-sidebar-panel-strong",
@@ -74,24 +65,10 @@ export function renderSubagentTool(
 
   // Completed state: tool has returned a result
   if (isDone) {
-    const allStatuses = subtasks.map((st) => _getSubtaskStatus?.(st.id) ?? "pending");
-    const completedCount = allStatuses.filter((s) => s === "completed").length;
-    const failedCount = allStatuses.filter((s) => s === "failed").length;
-
     return {
       content: (
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-sm text-sidebar-muted">
-            {failedCount > 0 ? (
-              <XCircle className="h-3.5 w-3.5 shrink-0 text-semantic-error" />
-            ) : (
-              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-accent" />
-            )}
-            <span>
-              Subtasks done — {completedCount}/{subtasks.length} completed
-              {failedCount > 0 ? `, ${failedCount} failed` : ""}
-            </span>
-          </div>
+          <SubtasksSummary subtasks={subtasks} />
           <div className="flex flex-col gap-1.5">
             {subtasks.map((st) => (
               <SubtaskLabel key={st.id} subtask={st} />
@@ -104,22 +81,10 @@ export function renderSubagentTool(
   }
 
   // Running state: subtasks known, tool still executing
-  const allStatuses = subtasks.map((st) => _getSubtaskStatus?.(st.id) ?? "pending");
-  const runningCount = allStatuses.filter((s) => s === "running").length;
-  const completedCount = allStatuses.filter((s) => s === "completed").length;
-
   return {
     content: (
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2 text-sm text-sidebar-muted">
-          <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0 text-accent" />
-          <GitBranch className="h-3.5 w-3.5 shrink-0" />
-          <span>
-            {runningCount > 0
-              ? `Running subtasks — ${completedCount}/${subtasks.length} done`
-              : `Subtasks (${subtasks.length})`}
-          </span>
-        </div>
+        <SubtasksSummary subtasks={subtasks} />
         <div className="flex flex-col gap-1.5">
           {subtasks.map((st) => (
             <SubtaskLabel key={st.id} subtask={st} />
@@ -129,4 +94,41 @@ export function renderSubagentTool(
     ),
     isCustom: true,
   };
+}
+
+function SubtasksSummary({ subtasks }: { subtasks: Subtask[] }) {
+  const { statusMap } = useSubagentToolContext();
+  const allStatuses = subtasks.map((st) => statusMap.get(st.id) ?? "pending");
+  const runningCount = allStatuses.filter((s) => s === "running").length;
+  const completedCount = allStatuses.filter((s) => s === "completed").length;
+  const failedCount = allStatuses.filter((s) => s === "failed").length;
+  const isDone = completedCount + failedCount === subtasks.length;
+
+  if (isDone) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-sidebar-muted">
+        {failedCount > 0 ? (
+          <XCircle className="h-3.5 w-3.5 shrink-0 text-semantic-error" />
+        ) : (
+          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-accent" />
+        )}
+        <span>
+          Subtasks done — {completedCount}/{subtasks.length} completed
+          {failedCount > 0 ? `, ${failedCount} failed` : ""}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 text-sm text-sidebar-muted">
+      <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0 text-accent" />
+      <GitBranch className="h-3.5 w-3.5 shrink-0" />
+      <span>
+        {runningCount > 0
+          ? `Running subtasks — ${completedCount}/${subtasks.length} done`
+          : `Subtasks (${subtasks.length})`}
+      </span>
+    </div>
+  );
 }

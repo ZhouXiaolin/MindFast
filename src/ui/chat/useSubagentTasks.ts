@@ -13,7 +13,7 @@ interface SubagentTasksResult {
   tasks: SubtaskWithResult[];
   hasSubagentTasks: boolean;
   hasRunningSubagents: boolean;
-  getStatus: (id: string) => SubtaskStatus;
+  statusMap: Map<string, SubtaskStatus>;
 }
 
 /**
@@ -95,7 +95,7 @@ export function useSubagentTasks(
       hasRunningSubagents: allTasks.some(
         (t) => t.status === "running" || t.status === "pending"
       ),
-      getStatus: (id: string) => statusMap.get(id) ?? "pending",
+      statusMap,
     };
   }, [messages, pendingToolCalls, subtaskRuns]);
 }

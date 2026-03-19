@@ -15,9 +15,10 @@ export { renderDefaultTool } from "./DefaultRenderer";
 export { renderArtifactsTool } from "./ArtifactsToolRenderer";
 export { renderWidgetTool } from "./WidgetToolRenderer";
 export { renderSubagentTool } from "./SubagentToolRenderer";
-export { setSubagentCallbacks } from "./SubagentToolRenderer";
 export { ArtifactPill } from "./ArtifactPill";
 export { registerToolRenderer, getToolRenderer } from "./registry";
+// Re-export SubagentToolProvider for external use
+export { SubagentToolProvider } from "./SubagentToolContext";
 
 // Register built-in tool renderers
 registerToolRenderer("artifacts", {
