@@ -8,9 +8,10 @@ import {
   setAppStorage,
 } from "./storage";
 import { EnabledProvidersStore, ModelsStore, EnabledModelsStore } from "./provider-stores";
+import { SubtaskRunsStore } from "./storage/stores/subtask-runs-store";
 
 const DB_NAME = "mindfast-pi";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let storageInstance: ExtendedAppStorage | null = null;
 let initPromise: Promise<ExtendedAppStorage> | null = null;
@@ -34,6 +35,7 @@ export async function initStorage(): Promise<ExtendedAppStorage> {
     const enabledProviders = new EnabledProvidersStore();
     const models = new ModelsStore();
     const enabledModels = new EnabledModelsStore();
+    const subtaskRuns = new SubtaskRunsStore();
 
     const backend = new IndexedDBStorageBackend({
       dbName: DB_NAME,
@@ -47,6 +49,7 @@ export async function initStorage(): Promise<ExtendedAppStorage> {
         enabledProviders.getConfig(),
         models.getConfig(),
         enabledModels.getConfig(),
+        subtaskRuns.getConfig(),
       ],
     });
 
@@ -57,6 +60,7 @@ export async function initStorage(): Promise<ExtendedAppStorage> {
     enabledProviders.setBackend(backend);
     models.setBackend(backend);
     enabledModels.setBackend(backend);
+    subtaskRuns.setBackend(backend);
 
     const appStorage = new AppStorage(
       settings,
@@ -71,6 +75,7 @@ export async function initStorage(): Promise<ExtendedAppStorage> {
     extendedStorage.enabledProviders = enabledProviders;
     extendedStorage.models = models;
     extendedStorage.enabledModels = enabledModels;
+    extendedStorage.subtaskRuns = subtaskRuns;
 
     setAppStorage(appStorage);
     storageInstance = extendedStorage;
@@ -95,4 +100,5 @@ export interface ExtendedAppStorage extends AppStorage {
   enabledProviders: EnabledProvidersStore;
   models: ModelsStore;
   enabledModels: EnabledModelsStore;
+  subtaskRuns: SubtaskRunsStore;
 }

@@ -139,15 +139,26 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     [agent, isSessionReady, isStreaming]
   );
 
-  const handleEditUserMessage = useCallback((text: string) => {
-    setInput(text);
-    autoScrollRef.current = true;
-    requestAnimationFrame(() => {
-      composerTextareaRef.current?.focus();
-      composerTextareaRef.current?.setSelectionRange(text.length, text.length);
-      composerTextareaRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    });
-  }, []);
+  const handleEditUserMessage = useCallback(
+    async (messageIndex: number, newContent: string) => {
+      const t = newContent.trim();
+      if (!t || !agent || isStreaming) return;
+      if (!isSessionReady()) return;
+
+      autoScrollRef.current = true;
+      setInput("");
+
+      try {
+        agent.abort();
+        agent.replaceMessages(messages.slice(0, messageIndex));
+        syncAgentState(agent);
+        await agent.prompt(t);
+      } catch (error) {
+        console.error(error);
+      }
+    },
+    [agent, isSessionReady, isStreaming, messages, syncAgentState]
+  );
 
   const handleRetryUserMessage = useCallback(
     async (messageIndex: number, text: string) => {

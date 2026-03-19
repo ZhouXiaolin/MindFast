@@ -4,6 +4,8 @@ import type { Model } from "@mariozechner/pi-ai";
 import type { ArtifactsStore } from "../../ai/artifacts/store";
 import type { Artifact } from "../../ai/artifacts/types";
 import { getInitializedAppStorage, initApp } from "../../init";
+import { initializeSubtaskRuntime } from "../../ai/subtasks-runtime";
+import { getDefaultModel } from "../../ai/agent";
 
 interface ChatRuntimeState {
   agent: Agent | null;
@@ -119,8 +121,15 @@ export function useChatRuntime(sessionId: string): UseChatRuntimeResult {
           agent.setThinkingLevel(savedSession.thinkingLevel);
           agent.replaceMessages(savedSession.messages);
         } else {
+          // New session: reload the default model from user config
+          const defaultModel = await getDefaultModel(storage);
+          agent.setModel(defaultModel);
+          agent.setThinkingLevel("off");
           agent.replaceMessages([]);
         }
+
+        // Initialize subtask runtime with the session ID
+        await initializeSubtaskRuntime(sessionId, storage.subtaskRuns);
 
         hydratedSessionRef.current = sessionId;
         syncAgentState(agent);

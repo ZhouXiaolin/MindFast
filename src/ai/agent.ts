@@ -69,6 +69,47 @@ function createCustomModel(providerId: string, modelId: string, modelName: strin
 }
 
 /**
+ * Get the default model from user configuration or fallback
+ */
+export async function getDefaultModel(storage: ExtendedAppStorage): Promise<Model<any>> {
+  // Try to get the first enabled model from user configuration
+  let defaultModel: Model<any> = getModel("openai", "gpt-4o-mini"); // fallback
+
+  try {
+    const enabledProviderIds = await storage.enabledProviders.getAll();
+    for (const providerId of enabledProviderIds) {
+      const providerEnabledModels = await storage.enabledModels.get(providerId);
+      if (providerEnabledModels && providerEnabledModels.modelIds.length > 0) {
+        const modelId = providerEnabledModels.modelIds[0];
+
+        // For known providers, use getModel from pi-ai
+        if (isKnownProvider(providerId)) {
+          try {
+            defaultModel = getModel(providerId as any, modelId as any);
+            break;
+          } catch (e) {
+            console.warn(`Failed to load model for ${providerId}:${modelId}, trying next provider`);
+            continue;
+          }
+        } else {
+          // For custom providers (deepseek, moonshot, etc.), create openai-completions model
+          const customModels = getCustomProviderModels(providerId);
+          const customModel = customModels?.find((m) => m.id === modelId);
+          if (customModel) {
+            defaultModel = createCustomModel(providerId, modelId, customModel.name);
+            break;
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to load user's default model, using fallback:", e);
+  }
+
+  return defaultModel;
+}
+
+/**
  * Create an agent with the given storage and artifacts store
  */
 export async function createAgent(
@@ -76,7 +117,7 @@ export async function createAgent(
   artifactsStore: ArtifactsStore
 ): Promise<Agent> {
   // Try to get the first enabled model from user configuration
-  let defaultModel: Model<any> = getModel("openai", "gpt-4o-mini"); // fallback
+  let defaultModel = await getDefaultModel(storage);
 
   try {
     const enabledProviderIds = await storage.enabledProviders.getAll();

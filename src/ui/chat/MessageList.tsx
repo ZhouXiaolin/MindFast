@@ -9,7 +9,7 @@ interface MessageListProps {
   pendingToolCalls?: Set<string>;
   isStreaming?: boolean;
   onOpenArtifact?: (filename: string) => void;
-  onEditUserMessage?: (content: string) => void;
+  onEditUserMessage?: (messageIndex: number, newContent: string) => void;
   onRetryUserMessage?: (messageIndex: number, content: string) => void;
 }
 
@@ -42,7 +42,7 @@ export function MessageList({
         <UserMessage
           key={`msg-${index}`}
           message={msg as any}
-          onEdit={onEditUserMessage}
+          onEdit={(newContent) => onEditUserMessage?.(messageIndex, newContent)}
           onRetry={(content) => onRetryUserMessage?.(messageIndex, content)}
         />
       );

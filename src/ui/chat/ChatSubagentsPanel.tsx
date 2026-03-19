@@ -4,7 +4,6 @@ import type { AssistantMessage as AssistantMessageType, ToolResultMessage } from
 import type { SubtaskWithResult, SubtaskStatus } from "../../ai/subagent-types";
 import { cn } from "../../utils/cn";
 import { AssistantMessage } from "./AssistantMessage";
-import { ArtifactPreview } from "../artifacts/ArtifactPreview";
 
 interface ChatSubagentsPanelProps {
   tasks: SubtaskWithResult[];
@@ -101,8 +100,6 @@ function SubtaskRunView({
     );
   }
 
-  const hasArtifacts = run.artifacts.length > 0;
-
   return (
     <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3">
@@ -110,28 +107,6 @@ function SubtaskRunView({
           {messageParts}
         </div>
       </div>
-      {hasArtifacts && (
-        <div className="shrink-0 border-t border-sidebar-soft">
-          <div className="px-4 py-2 text-xs font-medium text-sidebar-muted">
-            Artifacts ({run.artifacts.length})
-          </div>
-          <div className="max-h-[40vh] overflow-y-auto">
-            {run.artifacts.map((artifact) => (
-              <div key={artifact.filename} className="border-t border-sidebar-soft">
-                <div className="px-4 py-1.5 text-xs font-mono text-sidebar-muted">
-                  {artifact.filename}
-                </div>
-                <div className="h-50 overflow-hidden">
-                  <ArtifactPreview
-                    filename={artifact.filename}
-                    content={artifact.content}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

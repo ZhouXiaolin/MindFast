@@ -1,5 +1,5 @@
 import { Agent } from "@mariozechner/pi-agent-core";
-import type { AgentTool } from "@mariozechner/pi-agent-core";
+import type { AgentTool, AgentMessage } from "@mariozechner/pi-agent-core";
 import { Type, type Static } from "@mariozechner/pi-ai";
 import type { ExtendedAppStorage } from "../stores/init";
 import { defaultConvertToLlm } from "./convert";
@@ -48,6 +48,25 @@ function mergeUniqueSubtasks(subtasks: Subtask[]): Subtask[] {
   return result;
 }
 
+function extractLastAssistantText(messages: AgentMessage[]): string {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    if (msg.role !== "assistant") continue;
+    const content = (msg as { role: string; content: unknown }).content;
+    if (typeof content === "string" && content.trim()) {
+      return content.trim().slice(0, 300);
+    }
+    if (Array.isArray(content)) {
+      for (const part of content as Array<{ type: string; text?: string }>) {
+        if (part.type === "text" && part.text?.trim()) {
+          return part.text.trim().slice(0, 300);
+        }
+      }
+    }
+  }
+  return "";
+}
+
 export function createSubtasksTool(
   storage: ExtendedAppStorage,
   getAgent: () => Agent | null
@@ -69,7 +88,7 @@ export function createSubtasksTool(
       const subtasks = mergeUniqueSubtasks(args.subtasks as Subtask[]);
       clearSubtaskRuns(subtasks.map((st) => st.id));
 
-      const runOne = async (subtask: Subtask): Promise<{ ok: boolean; id: string }> => {
+      const runOne = async (subtask: Subtask): Promise<{ ok: boolean; id: string; summary: string }> => {
         let childAgent: Agent | null = null;
         const artifactsStore = new ArtifactsStore();
         let unsubscribe: (() => void) | undefined;
@@ -127,7 +146,8 @@ export function createSubtasksTool(
 
           await childAgent.prompt(subtask.prompt);
           syncRunState();
-          return { ok: true, id: subtask.id };
+          const summary = extractLastAssistantText(childAgent.state.messages);
+          return { ok: true, id: subtask.id, summary };
         } catch (error) {
           upsertSubtaskRun(subtask.id, {
             messages: childAgent?.state.messages.slice() ?? [],
@@ -136,7 +156,7 @@ export function createSubtasksTool(
             artifacts: [],
             error: error instanceof Error ? error.message : "Subtask failed",
           });
-          return { ok: false, id: subtask.id };
+          return { ok: false, id: subtask.id, summary: "" };
         } finally {
           unsubscribe?.();
           abortListener?.();
@@ -147,10 +167,21 @@ export function createSubtasksTool(
       const results = await Promise.all(subtasks.map((subtask) => runOne(subtask)));
       const completed = results.filter((r) => r.ok).length;
       const failed = results.length - completed;
-      const summary = `Subtasks finished: ${completed}/${results.length} completed${failed ? `, ${failed} failed` : ""}.`;
+
+      const lines = results.map((r) => {
+        const task = subtasks.find((s) => s.id === r.id);
+        const label = task?.label ?? r.id;
+        if (r.ok) {
+          return `• ${label}: ${r.summary || "completed"}`;
+        }
+        return `• ${label}: failed`;
+      });
+
+      const header = `Subtasks done (${completed}/${results.length}${failed ? `, ${failed} failed` : ""}):`;
+      const summaryText = `${header}\n${lines.join("\n")}`;
 
       return {
-        content: [{ type: "text", text: summary }],
+        content: [{ type: "text", text: summaryText }],
         details: { completed, failed, total: results.length },
       };
     },
