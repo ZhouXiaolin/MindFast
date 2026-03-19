@@ -7,12 +7,14 @@ import { useSavedArtifacts } from "../hooks/useWorkspaceData";
 export function ArtifactDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { sessionId, filename } = useParams<{ sessionId: string; filename: string }>();
+  const { sessionId, artifactId } = useParams<{ sessionId: string; artifactId: string }>();
   const { artifacts, loading } = useSavedArtifacts();
 
-  const decodedFilename = filename ? decodeURIComponent(filename) : null;
+  const decodedArtifactId = artifactId ? decodeURIComponent(artifactId) : null;
   const artifact = artifacts.find(
-    (item) => item.sessionId === sessionId && item.filename === decodedFilename
+    (item) =>
+      item.sessionId === sessionId &&
+      (item.artifactId === decodedArtifactId || item.filename === decodedArtifactId)
   );
 
   if (loading) {

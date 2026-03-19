@@ -33,6 +33,16 @@ function getRunsSignature(runs: Record<string, SubtaskRun>): string {
 	return JSON.stringify(runs);
 }
 
+function normalizeRun(runKey: string, run: SubtaskRun): SubtaskRun {
+	return {
+		...run,
+		artifacts: run.artifacts.map((artifact, index) => ({
+			...artifact,
+			id: artifact.id ?? `subtask:${runKey}:${index}:${artifact.filename}`,
+		})),
+	};
+}
+
 function emit(schedulePersist = true) {
 	snapshot = new Map(subtaskRuns);
 	for (const listener of listeners) {
@@ -97,7 +107,7 @@ export async function initializeSubtaskRuntime(
 	const runsObj = await store.getSessionRuns(sessionId);
 	if (runsObj) {
 		for (const [id, run] of Object.entries(runsObj)) {
-			subtaskRuns.set(id, run);
+			subtaskRuns.set(id, normalizeRun(id, run));
 		}
 		lastPersistedSignature = getRunsSignature(runsObj);
 	}
@@ -121,7 +131,7 @@ export async function loadSubtaskRuns(
 	const runs = new Map<string, SubtaskRun>();
 	if (runsObj) {
 		for (const [id, run] of Object.entries(runsObj)) {
-			runs.set(id, run);
+			runs.set(id, normalizeRun(id, run));
 		}
 	}
 	return runs;

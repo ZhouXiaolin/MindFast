@@ -1,9 +1,11 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
+import type { SubtaskRun } from "../subagent-types";
 import { ArtifactsStore } from "./store";
 
 export type WorkspaceArtifactKind = "html" | "markdown" | "text";
 
 export interface SavedArtifactSummary {
+  artifactId: string;
   sessionId: string;
   sessionTitle: string;
   filename: string;
@@ -33,6 +35,30 @@ function getArtifactKind(filename: string): WorkspaceArtifactKind {
   return "text";
 }
 
+function toSavedArtifactSummary(
+  artifactId: string,
+  sessionId: string,
+  sessionTitle: string,
+  updatedAt: string,
+  filename: string,
+  content: string
+): SavedArtifactSummary {
+  return {
+    artifactId,
+    sessionId,
+    sessionTitle,
+    filename,
+    content,
+    kind: getArtifactKind(filename),
+    updatedAt,
+    previewText: buildArtifactPreviewText(content),
+  };
+}
+
+function getArtifactId(artifact: { id?: string }, fallbackId: string): string {
+  return artifact.id ?? fallbackId;
+}
+
 export function extractArtifactsFromMessages(
   sessionId: string,
   sessionTitle: string,
@@ -42,13 +68,36 @@ export function extractArtifactsFromMessages(
   const store = new ArtifactsStore();
   store.reconstructFromMessages(messages);
 
-  return store.getSnapshot().map(([, artifact]) => ({
-    sessionId,
-    sessionTitle,
-    filename: artifact.filename,
-    content: artifact.content,
-    kind: getArtifactKind(artifact.filename),
-    updatedAt,
-    previewText: buildArtifactPreviewText(artifact.content),
-  }));
+  return store.getSnapshot().map(([, artifact]) =>
+    toSavedArtifactSummary(
+      getArtifactId(artifact, `main:${artifact.filename}`),
+      sessionId,
+      sessionTitle,
+      updatedAt,
+      artifact.filename,
+      artifact.content
+    )
+  );
+}
+
+export function extractArtifactsFromSubtaskRuns(
+  sessionId: string,
+  sessionTitle: string,
+  updatedAt: string,
+  runs: Record<string, SubtaskRun> | null | undefined
+): SavedArtifactSummary[] {
+  if (!runs) return [];
+
+  return Object.entries(runs).flatMap(([runKey, run]) =>
+    run.artifacts.map((artifact, index) =>
+      toSavedArtifactSummary(
+        getArtifactId(artifact, `subtask:${runKey}:${index}:${artifact.filename}`),
+        sessionId,
+        sessionTitle,
+        updatedAt,
+        artifact.filename,
+        artifact.content
+      )
+    )
+  );
 }

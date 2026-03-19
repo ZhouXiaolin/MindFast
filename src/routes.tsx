@@ -22,7 +22,7 @@ export const router = createBrowserRouter([
       { path: "chats", element: <ChatsPage /> },
       { path: "projects", element: <PlaceholderPage /> },
       { path: "artifacts", element: <ArtifactsPage /> },
-      { path: "artifacts/:sessionId/:filename", element: <ArtifactDetailPage /> },
+      { path: "artifacts/:sessionId/:artifactId", element: <ArtifactDetailPage /> },
       { path: "code", element: <PlaceholderPage /> },
       { path: "chat/:id", element: <ChatView /> },
       {

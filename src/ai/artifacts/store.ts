@@ -2,6 +2,16 @@ import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { ToolCall } from "@mariozechner/pi-ai";
 import type { Artifact, ArtifactMessage, ArtifactsParams } from "./types";
 
+function createArtifactId(seed?: string): string {
+  if (seed) {
+    return `artifact:${seed}`;
+  }
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `artifact-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export class ArtifactsStore {
   private _artifacts = new Map<string, Artifact>();
   onChange: (() => void) | null = null;
@@ -51,6 +61,7 @@ export class ArtifactsStore {
       return `Error: File ${params.filename} already exists`;
     }
     const artifact: Artifact = {
+      id: createArtifactId(),
       filename: params.filename,
       content: params.content,
       createdAt: new Date(),
@@ -164,7 +175,7 @@ export class ArtifactsStore {
       }
     }
 
-    const operations: ArtifactsParams[] = [];
+    const operations: Array<ArtifactsParams & { artifactId?: string }> = [];
     for (const m of messages) {
       const msg = m as { role: string } & Partial<ArtifactMessage>;
       if (msg.role === "artifact") {
@@ -172,6 +183,7 @@ export class ArtifactsStore {
         switch (am.action) {
           case "create":
             operations.push({
+              artifactId: createArtifactId(`${am.timestamp}:${am.filename}`),
               command: "create",
               filename: am.filename,
               content: am.content,
@@ -200,26 +212,52 @@ export class ArtifactsStore {
         if (!call) continue;
         const params = (call as ToolCall & { arguments: ArtifactsParams }).arguments as ArtifactsParams;
         if (params.command === "get" || params.command === "logs") continue;
-        operations.push(params);
+        operations.push({
+          ...params,
+          artifactId: params.command === "create" ? createArtifactId(tr.toolCallId) : undefined,
+        });
       }
     }
 
-    const finalArtifacts = new Map<string, string>();
+    const finalArtifacts = new Map<string, Artifact>();
     for (const op of operations) {
       const filename = op.filename;
       switch (op.command) {
-        case "create":
-          if (op.content != null) finalArtifacts.set(filename, op.content);
+        case "create": {
+          if (op.content == null) break;
+          const existing = finalArtifacts.get(filename);
+          finalArtifacts.set(filename, {
+            id: existing?.id ?? op.artifactId ?? createArtifactId(filename),
+            filename,
+            content: op.content,
+            createdAt: existing?.createdAt ?? new Date(),
+            updatedAt: new Date(),
+          });
           break;
-        case "rewrite":
-          if (op.content != null) finalArtifacts.set(filename, op.content);
+        }
+        case "rewrite": {
+          if (op.content == null) break;
+          const existing = finalArtifacts.get(filename);
+          finalArtifacts.set(filename, {
+            id: existing?.id ?? op.artifactId ?? createArtifactId(filename),
+            filename,
+            content: op.content,
+            createdAt: existing?.createdAt ?? new Date(),
+            updatedAt: new Date(),
+          });
           break;
-        case "update":
+        }
+        case "update": {
           const existing = finalArtifacts.get(filename);
           if (existing != null && op.old_str !== undefined && op.new_str !== undefined) {
-            finalArtifacts.set(filename, existing.replace(op.old_str, op.new_str));
+            finalArtifacts.set(filename, {
+              ...existing,
+              content: existing.content.replace(op.old_str, op.new_str),
+              updatedAt: new Date(),
+            });
           }
           break;
+        }
         case "delete":
           finalArtifacts.delete(filename);
           break;
@@ -230,13 +268,8 @@ export class ArtifactsStore {
     }
 
     this._artifacts.clear();
-    for (const [filename, content] of finalArtifacts.entries()) {
-      this._artifacts.set(filename, {
-        filename,
-        content,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
+    for (const [filename, artifact] of finalArtifacts.entries()) {
+      this._artifacts.set(filename, artifact);
     }
     this._artifacts = new Map(this._artifacts);
     this.emit();

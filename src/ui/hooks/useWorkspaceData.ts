@@ -4,6 +4,7 @@ import { getInitializedAppStorage } from "../../init";
 import { useAppStore } from "../../stores/app";
 import {
   extractArtifactsFromMessages,
+  extractArtifactsFromSubtaskRuns,
   type SavedArtifactSummary,
 } from "../../ai/artifacts/extract";
 
@@ -61,18 +62,29 @@ export function useSavedArtifacts() {
         const sessions = await Promise.all(
           metadataList.map(async (metadata) => {
             const data = await storage.sessions.loadSession(metadata.id);
-            return { metadata, data };
+            const subtaskRuns = await storage.subtaskRuns.getSessionRuns(metadata.id);
+            return { metadata, data, subtaskRuns };
           })
         );
 
-        const allArtifacts = sessions.flatMap(({ metadata, data }) => {
-          if (!data) return [];
-          return extractArtifactsFromMessages(
+        const allArtifacts = sessions.flatMap(({ metadata, data, subtaskRuns }) => {
+          const sessionTitle = metadata.title || data?.title || "Untitled chat";
+          const messageArtifacts = data
+            ? extractArtifactsFromMessages(
+              metadata.id,
+              sessionTitle,
+              metadata.lastModified,
+              data.messages
+            )
+            : [];
+          const subtaskArtifacts = extractArtifactsFromSubtaskRuns(
             metadata.id,
-            metadata.title || data.title || "Untitled chat",
+            sessionTitle,
             metadata.lastModified,
-            data.messages
+            subtaskRuns
           );
+
+          return [...messageArtifacts, ...subtaskArtifacts];
         });
 
         allArtifacts.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));

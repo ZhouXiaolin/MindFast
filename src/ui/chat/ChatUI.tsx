@@ -78,7 +78,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
 
   const artifactItems = useMemo<ArtifactPanelItem[]>(() => {
     const panelItems: ArtifactPanelItem[] = artifactsList.map((artifact) => ({
-      id: `main:${artifact.filename}`,
+      id: `main:${artifact.id}`,
       artifact,
       kind: "main",
       label: artifact.filename,
@@ -87,7 +87,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     for (const task of subagentTasks) {
       for (const [index, artifact] of (task.run?.artifacts ?? []).entries()) {
         panelItems.push({
-          id: `subtask:${task.runKey}:${artifact.filename}:${index}`,
+          id: `subtask:${artifact.id ?? `${task.runKey}:${artifact.filename}:${index}`}`,
           artifact,
           kind: "subtask",
           label: `${artifact.filename} · ${task.label}`,

@@ -21,6 +21,7 @@ declare module "@mariozechner/pi-agent-core" {
 }
 
 export interface Artifact {
+  id: string;
   filename: string;
   content: string;
   createdAt: Date;

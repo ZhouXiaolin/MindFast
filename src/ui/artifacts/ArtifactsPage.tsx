@@ -63,10 +63,10 @@ export function ArtifactsPage() {
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {artifacts.map((artifact) => (
                 <button
-                  key={`${artifact.sessionId}:${artifact.filename}`}
+                  key={`${artifact.sessionId}:${artifact.artifactId}`}
                   type="button"
                   onClick={() =>
-                    navigate(`/artifacts/${artifact.sessionId}/${encodeURIComponent(artifact.filename)}`)
+                    navigate(`/artifacts/${artifact.sessionId}/${encodeURIComponent(artifact.artifactId)}`)
                   }
                   className="rounded-[1.5rem] border border-sidebar-soft bg-sidebar-panel p-4 text-left transition-colors hover:bg-sidebar-panel-strong"
                 >
