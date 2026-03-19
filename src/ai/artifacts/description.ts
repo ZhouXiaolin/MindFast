@@ -1,14 +1,14 @@
 /**
- * Tool description for the artifacts tool. Can be extended later with runtime provider descriptions.
+ * Tool description for the artifacts tool. Artifacts = persistent files to save, not for inline display.
  */
-export const ARTIFACTS_TOOL_DESCRIPTION = `# Artifacts
+export const ARTIFACTS_TOOL_DESCRIPTION = `# Artifacts (save as files)
 
-Create and manage persistent files that live alongside the conversation.
+Create and manage **persistent files** that are saved alongside the conversation. Use this when the user wants to **keep a file** (download, edit later, or open in the panel).
 
-## When to Use
-- Use this tool only when the user needs a persistent file or explicitly asks to create, save, update, or manage one.
-- Good fits: markdown notes, documentation, html apps, json/csv data files, svg/code files the user should keep.
-- Prefer a normal chat response for greetings, simple Q&A, short explanations, brainstorming, and ordinary conversation.
+## When to Use Artifacts
+- Use when the intent is to **save output as a file**: documentation, notes, exported data, code to keep, HTML/app to run as a file.
+- Do NOT use for content that is only meant to be **shown once in the chat** (use the widget tool for that).
+- Good fits: "save this as markdown", "create a file", "export to CSV", "give me an HTML file I can open".
 
 ## Commands
 - create: Create new file. Requires filename and content.

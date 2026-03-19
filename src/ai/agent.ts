@@ -7,12 +7,17 @@ import { getApiKeyPromptHandler } from "./api-key-prompt";
 import { isKnownProvider, getCustomProviderModels } from "./providers";
 import type { ArtifactsStore } from "./artifacts/store";
 import { createArtifactsTool } from "./artifacts/tool";
+import { createWidgetTool } from "./widget/tool";
 
 const DEFAULT_SYSTEM_PROMPT = `You are a helpful assistant.
 
 Answer directly in chat by default.
-Use the artifacts tool only when the user explicitly asks you to create, save, update, or manage a file, or when the output is clearly a persistent deliverable such as markdown, html, json, csv, svg, or code the user should keep.
-Do not create artifacts for greetings, simple questions, short explanations, brainstorming, or normal conversational replies.`;
+
+**Artifacts** = save as files. Use the artifacts tool when the user wants to **keep a file** (create, save, update, or manage a persistent file). Do not use for content that is only meant to be shown in the chat.
+
+**Widget** = show in chat. Use the widget tool when the intent is to **display content directly in the conversation** (e.g. a small HTML demo, a chart, a rendered snippet, something the user should see inline). Do not use for content the user asked to save as a file.
+
+Do not create artifacts or widgets for greetings, simple Q&A, short explanations, brainstorming, or normal conversational replies.`;
 
 /**
  * Provider base URLs for custom providers using openai-completions API
@@ -102,6 +107,7 @@ export async function createAgent(
   }
 
   const artifactsTool = createArtifactsTool(artifactsStore, () => agent);
+  const widgetTool = createWidgetTool();
 
   const agent = new Agent({
     initialState: {
@@ -109,7 +115,7 @@ export async function createAgent(
       model: defaultModel,
       thinkingLevel: "off",
       messages: [],
-      tools: [artifactsTool],
+      tools: [artifactsTool, widgetTool],
     },
     convertToLlm: defaultConvertToLlm,
     getApiKey: async (provider: string) => {

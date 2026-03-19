@@ -1,13 +1,16 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import type { ArtifactsParams } from "../../../ai/artifacts/types";
+import type { WidgetParamsSchema } from "../../../ai/widget/tool";
 import { renderDefaultTool } from "./DefaultRenderer";
 import { renderArtifactsTool } from "./ArtifactsToolRenderer";
+import { renderWidgetTool } from "./WidgetToolRenderer";
 import { registerToolRenderer, getToolRenderer } from "./registry";
 import type { ToolRenderResult } from "./types";
 
 export type { ToolRenderResult, ToolRenderer } from "./types";
 export { renderDefaultTool } from "./DefaultRenderer";
 export { renderArtifactsTool } from "./ArtifactsToolRenderer";
+export { renderWidgetTool } from "./WidgetToolRenderer";
 export { ArtifactPill } from "./ArtifactPill";
 export { registerToolRenderer, getToolRenderer } from "./registry";
 
@@ -26,6 +29,23 @@ registerToolRenderer("artifacts", {
       result,
       isStreaming,
       onOpenArtifact
+    );
+  },
+});
+
+registerToolRenderer("widget", {
+  render(
+    toolName: string,
+    params: unknown,
+    result: ToolResultMessage | undefined,
+    isStreaming?: boolean,
+    _onOpenArtifact?: (filename: string) => void
+  ): ToolRenderResult {
+    return renderWidgetTool(
+      toolName,
+      params as WidgetParamsSchema | undefined,
+      result,
+      isStreaming
     );
   },
 });

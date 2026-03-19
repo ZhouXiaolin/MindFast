@@ -36,22 +36,15 @@ export function StreamingMessageContainer({
 
   if (message.role === "assistant") {
     return (
-      <div className="flex flex-col gap-3">
-        <AssistantMessage
-          message={message as any}
-          tools={tools}
-          pendingToolCalls={pendingToolCalls}
-          toolResultsById={toolResultsById}
-          isStreaming={isStreaming}
-          hidePendingToolCalls={false}
-          onOpenArtifact={onOpenArtifact}
-        />
-        {isStreaming ? (
-          <div className="assistant-message-container flex">
-            <span className="ml-1 inline-block h-4 w-2 animate-pulse rounded bg-sidebar-muted" />
-          </div>
-        ) : null}
-      </div>
+      <AssistantMessage
+        message={message as any}
+        tools={tools}
+        pendingToolCalls={pendingToolCalls}
+        toolResultsById={toolResultsById}
+        isStreaming={isStreaming}
+        hidePendingToolCalls={false}
+        onOpenArtifact={onOpenArtifact}
+      />
     );
   }
 

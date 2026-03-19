@@ -84,6 +84,16 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     touchWorkspaceRevision,
   });
 
+  const prevIsStreamingRef = useRef(false);
+  useEffect(() => {
+    if (prevIsStreamingRef.current && !isStreaming) {
+      requestAnimationFrame(() => {
+        composerTextareaRef.current?.focus();
+      });
+    }
+    prevIsStreamingRef.current = isStreaming;
+  }, [isStreaming]);
+
   const handleSend = useCallback(
     async (text: string) => {
       const t = text.trim();
