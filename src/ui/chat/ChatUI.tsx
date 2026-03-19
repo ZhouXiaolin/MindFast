@@ -17,6 +17,7 @@ import { useSubagentPanel } from "./useSubagentPanel";
 import { ChatSubagentsPanel } from "./ChatSubagentsPanel";
 import { SubagentToolProvider } from "./tools";
 import { useSubtaskRuns } from "./useSubtaskRuns";
+import { isArtifactPath } from "../../ai/workspace-types";
 interface ChatUIProps {
   sessionId: string;
 }
@@ -77,15 +78,20 @@ export function ChatUI({ sessionId }: ChatUIProps) {
   } = useSubagentPanel(subagentTasks);
 
   const artifactItems = useMemo<ArtifactPanelItem[]>(() => {
-    const panelItems: ArtifactPanelItem[] = artifactsList.map((artifact) => ({
-      id: `main:${artifact.id}`,
-      artifact,
-      kind: "main",
-      label: artifact.filename,
-    }));
+    const panelItems: ArtifactPanelItem[] = artifactsList
+      .filter((artifact) => isArtifactPath(artifact.filename))
+      .map((artifact) => ({
+        id: `main:${artifact.id}`,
+        artifact,
+        kind: "main",
+        label: artifact.filename,
+      }));
 
     for (const task of subagentTasks) {
       for (const [index, artifact] of (task.run?.artifacts ?? []).entries()) {
+        if (!isArtifactPath(artifact.filename)) {
+          continue;
+        }
         panelItems.push({
           id: `subtask:${artifact.id ?? `${task.runKey}:${artifact.filename}:${index}`}`,
           artifact,

@@ -1,79 +1,68 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
-import type { ArtifactsParams } from "../../../ai/artifacts/types";
-import type { WidgetParamsSchema } from "../../../ai/widget/tool";
-import type { SubtasksToolParams } from "../../../ai/subagent-types";
-import { SUBAGENT_TOOL_NAME } from "../../../ai/subagent-types";
+import type { EditToolArgs, ReadToolArgs, WriteToolArgs } from "../../../ai/file-tools";
+import type { BashToolArgs } from "../../../ai/tools";
 import { renderDefaultTool } from "./DefaultRenderer";
-import { renderArtifactsTool } from "./ArtifactsToolRenderer";
-import { renderWidgetTool } from "./WidgetToolRenderer";
-import { renderSubagentTool } from "./SubagentToolRenderer";
+import { renderReadTool } from "./ReadToolRenderer";
+import { renderFileTool } from "./FileToolRenderer";
+import { renderBashTool } from "./BashToolRenderer";
 import { registerToolRenderer, getToolRenderer } from "./registry";
 import type { ToolRenderResult } from "./types";
 
 export type { ToolRenderResult, ToolRenderer } from "./types";
 export { renderDefaultTool } from "./DefaultRenderer";
-export { renderArtifactsTool } from "./ArtifactsToolRenderer";
-export { renderWidgetTool } from "./WidgetToolRenderer";
-export { renderSubagentTool } from "./SubagentToolRenderer";
+export { renderReadTool } from "./ReadToolRenderer";
+export { renderFileTool } from "./FileToolRenderer";
+export { renderBashTool } from "./BashToolRenderer";
 export { ArtifactPill } from "./ArtifactPill";
 export { registerToolRenderer, getToolRenderer } from "./registry";
-// Re-export SubagentToolProvider for external use
 export { SubagentToolProvider } from "./SubagentToolContext";
 
-// Register built-in tool renderers
-registerToolRenderer("artifacts", {
+registerToolRenderer("read", {
   render(
     toolName: string,
+    params: unknown,
+    result: ToolResultMessage | undefined,
+    isStreaming?: boolean
+  ): ToolRenderResult {
+    return renderReadTool(toolName, params as ReadToolArgs | undefined, result, isStreaming);
+  },
+});
+
+registerToolRenderer("write", {
+  render(
+    _toolName: string,
     params: unknown,
     result: ToolResultMessage | undefined,
     isStreaming?: boolean,
     _toolCallId?: string,
     onOpenArtifact?: (filename: string) => void
   ): ToolRenderResult {
-    return renderArtifactsTool(
-      toolName,
-      params as ArtifactsParams | undefined,
-      result,
-      isStreaming,
-      onOpenArtifact
-    );
+    return renderFileTool("write", params as WriteToolArgs | undefined, result, isStreaming, onOpenArtifact);
   },
 });
 
-registerToolRenderer("widget", {
+registerToolRenderer("edit", {
   render(
-    toolName: string,
+    _toolName: string,
     params: unknown,
     result: ToolResultMessage | undefined,
     isStreaming?: boolean,
     _toolCallId?: string,
-    _onOpenArtifact?: (filename: string) => void
+    onOpenArtifact?: (filename: string) => void
   ): ToolRenderResult {
-    return renderWidgetTool(
-      toolName,
-      params as WidgetParamsSchema | undefined,
-      result,
-      isStreaming
-    );
+    return renderFileTool("edit", params as EditToolArgs | undefined, result, isStreaming, onOpenArtifact);
   },
 });
 
-registerToolRenderer(SUBAGENT_TOOL_NAME, {
+registerToolRenderer("bash", {
   render(
     toolName: string,
     params: unknown,
     result: ToolResultMessage | undefined,
     isStreaming?: boolean,
-    toolCallId?: string,
-    _onOpenArtifact?: (filename: string) => void
+    toolCallId?: string
   ): ToolRenderResult {
-    return renderSubagentTool(
-      toolName,
-      params as SubtasksToolParams | undefined,
-      result,
-      isStreaming,
-      toolCallId
-    );
+    return renderBashTool(toolName, params as BashToolArgs | undefined, result, isStreaming, toolCallId);
   },
 });
 

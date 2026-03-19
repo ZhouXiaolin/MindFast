@@ -2,9 +2,9 @@ import { useMemo } from "react";
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { AssistantMessage, ToolResultMessage } from "@mariozechner/pi-ai";
 import {
+  extractSubtasksFromToolCall,
   getSubtaskRunKey,
   SUBAGENT_TOOL_NAME,
-  type Subtask,
   type SubtaskStatus,
   type SubtaskWithResult,
   type SubtaskRun,
@@ -19,8 +19,8 @@ interface SubagentTasksResult {
 
 /**
  * Parse subtask list from the message stream.
- * Looks for tool calls with name === SUBAGENT_TOOL_NAME whose arguments
- * contain `subtasks: Array<{ id, label, prompt }>`.
+ * Looks for bash tool calls that launch `subagent`, with stdin JSON
+ * containing `subtasks: Array<{ id, label, prompt }>`.
  *
  * Status is derived from pendingToolCalls and toolResult availability.
  * The overall tool call wrapping all subtasks has a single toolCallId;
@@ -49,9 +49,8 @@ export function useSubagentTasks(
         if (chunk.type !== "toolCall") continue;
         const tc = chunk as { id: string; name: string; arguments?: unknown };
         if (tc.name !== SUBAGENT_TOOL_NAME) continue;
-        const args = tc.arguments as { subtasks?: Subtask[] } | undefined;
-        const subtasks = args?.subtasks;
-        if (!subtasks || !Array.isArray(subtasks)) continue;
+        const subtasks = extractSubtasksFromToolCall(tc.name, tc.arguments);
+        if (!subtasks || subtasks.length === 0) continue;
 
         const isPending = pendingToolCalls.has(tc.id);
         const hasResult = toolResultsById.has(tc.id);

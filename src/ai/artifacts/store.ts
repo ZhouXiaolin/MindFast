@@ -1,5 +1,6 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { ToolCall } from "@mariozechner/pi-ai";
+import { ARTIFACTS_DIR, WIDGETS_DIR, getDisplayPath, getParentPath, normalizeWorkspacePath } from "../workspace-types";
 import type { Artifact, ArtifactMessage, ArtifactsParams } from "./types";
 
 function createArtifactId(seed?: string): string {
@@ -12,9 +13,46 @@ function createArtifactId(seed?: string): string {
   return `artifact-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
+interface WriteFileResult {
+  action: "create" | "update";
+  file: Artifact;
+  message: string;
+}
+
+interface EditFileResult {
+  file: Artifact;
+  message: string;
+}
+
+interface WorkspaceEntry {
+  path: string;
+  type: "file" | "dir";
+}
+
+function createNotFoundMessage(path: string, availablePaths: string[]): string {
+  if (availablePaths.length === 0) {
+    return `Error: File ${path} not found. No files have been created yet.`;
+  }
+  return `Error: File ${path} not found. Available files: ${availablePaths.join(", ")}`;
+}
+
+function sortEntries(entries: WorkspaceEntry[]): WorkspaceEntry[] {
+  return entries.sort((left, right) => {
+    if (left.type !== right.type) {
+      return left.type === "dir" ? -1 : 1;
+    }
+    return left.path.localeCompare(right.path);
+  });
+}
+
 export class ArtifactsStore {
   private _artifacts = new Map<string, Artifact>();
+  private _directories = new Set<string>();
   onChange: (() => void) | null = null;
+
+  constructor() {
+    this.resetDirectories();
+  }
 
   get artifacts(): Map<string, Artifact> {
     return this._artifacts;
@@ -24,254 +62,346 @@ export class ArtifactsStore {
     return Array.from(this._artifacts.entries());
   }
 
+  listAllPaths(): string[] {
+    return Array.from(this._artifacts.keys()).sort((left, right) => left.localeCompare(right));
+  }
+
   private emit(): void {
     this.onChange?.();
-   }
+  }
 
-  async executeCommand(
-    params: ArtifactsParams,
-    options: { skipWait?: boolean; silent?: boolean } = {}
-  ): Promise<string> {
+  private resetDirectories(): void {
+    this._directories = new Set([ARTIFACTS_DIR, WIDGETS_DIR]);
+  }
+
+  private ensureDirectory(path: string): void {
+    const normalizedPath = normalizeWorkspacePath(path);
+    if (!normalizedPath) return;
+
+    const segments = normalizedPath.split("/");
+    let current = "";
+    for (const segment of segments) {
+      current = current ? `${current}/${segment}` : segment;
+      this._directories.add(current);
+    }
+  }
+
+  private ensureParentDirectories(path: string): void {
+    const parentPath = getParentPath(path);
+    if (!parentPath) return;
+    this.ensureDirectory(parentPath);
+  }
+
+  hasPath(path: string): boolean {
+    const normalizedPath = normalizeWorkspacePath(path);
+    if (!normalizedPath) return true;
+    return this._artifacts.has(normalizedPath) || this._directories.has(normalizedPath);
+  }
+
+  private upsertFile(path: string, content: string, existingId?: string): Artifact {
+    const normalizedPath = normalizeWorkspacePath(path);
+    const now = new Date();
+    const existing = this._artifacts.get(normalizedPath);
+    this.ensureParentDirectories(normalizedPath);
+    const file: Artifact = {
+      id: existing?.id ?? existingId ?? createArtifactId(normalizedPath),
+      filename: normalizedPath,
+      content,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+    this._artifacts.set(normalizedPath, file);
+    this._artifacts = new Map(this._artifacts);
+    this.emit();
+    return file;
+  }
+
+  writeFile(path: string, content: string): WriteFileResult | string {
+    const normalizedPath = normalizeWorkspacePath(path);
+    if (!normalizedPath) {
+      return "Error: write requires a non-empty path";
+    }
+
+    const existing = this._artifacts.get(normalizedPath);
+    const file = this.upsertFile(normalizedPath, content, existing?.id);
+    return {
+      action: existing ? "update" : "create",
+      file,
+      message: `${existing ? "Updated" : "Created"} file ${normalizedPath}`,
+    };
+  }
+
+  editFile(path: string, oldText: string, newText: string): EditFileResult | string {
+    const normalizedPath = normalizeWorkspacePath(path);
+    if (!normalizedPath) {
+      return "Error: edit requires a non-empty path";
+    }
+
+    const existing = this._artifacts.get(normalizedPath);
+    if (!existing) {
+      return createNotFoundMessage(normalizedPath, this.listAllPaths());
+    }
+    if (!existing.content.includes(oldText)) {
+      return `Error: String not found in file. Here is the full content:\n\n${existing.content}`;
+    }
+
+    const file = this.upsertFile(normalizedPath, existing.content.replace(oldText, newText), existing.id);
+    return {
+      file,
+      message: `Edited file ${normalizedPath}`,
+    };
+  }
+
+  readFile(path: string): string {
+    const normalizedPath = normalizeWorkspacePath(path);
+    if (!normalizedPath) {
+      return "Error: read requires a non-empty path";
+    }
+
+    const existing = this._artifacts.get(normalizedPath);
+    if (!existing) {
+      return createNotFoundMessage(normalizedPath, this.listAllPaths());
+    }
+    return existing.content;
+  }
+
+  deleteFile(path: string): string {
+    const normalizedPath = normalizeWorkspacePath(path);
+    if (!normalizedPath) {
+      return "Error: delete requires a non-empty path";
+    }
+
+    const existing = this._artifacts.get(normalizedPath);
+    if (!existing) {
+      return createNotFoundMessage(normalizedPath, this.listAllPaths());
+    }
+
+    this._artifacts.delete(normalizedPath);
+    this._artifacts = new Map(this._artifacts);
+    this.emit();
+    return `Deleted file ${normalizedPath}`;
+  }
+
+  mkdir(path: string): string {
+    const normalizedPath = normalizeWorkspacePath(path);
+    if (!normalizedPath) {
+      return "Error: mkdir requires a non-empty path";
+    }
+
+    const sizeBefore = this._directories.size;
+    this.ensureDirectory(normalizedPath);
+    if (this._directories.size !== sizeBefore) {
+      this.emit();
+    }
+    return `Created directory ${normalizedPath}`;
+  }
+
+  listEntries(path = ""): WorkspaceEntry[] | null {
+    const normalizedPath = normalizeWorkspacePath(path);
+    const prefix = normalizedPath ? `${normalizedPath}/` : "";
+
+    if (normalizedPath && !this.hasPath(normalizedPath)) {
+      return null;
+    }
+
+    if (normalizedPath && this._artifacts.has(normalizedPath)) {
+      return [{ path: normalizedPath, type: "file" }];
+    }
+
+    const entries = new Map<string, WorkspaceEntry>();
+    for (const directoryPath of this._directories) {
+      if (normalizedPath && !directoryPath.startsWith(prefix)) {
+        continue;
+      }
+
+      const rest = normalizedPath ? directoryPath.slice(prefix.length) : directoryPath;
+      if (!rest) continue;
+
+      const [firstSegment] = rest.split("/");
+      const entryPath = normalizedPath ? `${normalizedPath}/${firstSegment}` : firstSegment;
+      entries.set(entryPath, {
+        path: entryPath,
+        type: "dir",
+      });
+    }
+
+    for (const filePath of this._artifacts.keys()) {
+      if (normalizedPath && !filePath.startsWith(prefix)) {
+        continue;
+      }
+
+      const rest = normalizedPath ? filePath.slice(prefix.length) : filePath;
+      if (!rest) continue;
+
+      const [firstSegment, ...remainingSegments] = rest.split("/");
+      const entryPath = normalizedPath ? `${normalizedPath}/${firstSegment}` : firstSegment;
+      entries.set(entryPath, {
+        path: entryPath,
+        type: remainingSegments.length > 0 ? "dir" : "file",
+      });
+    }
+
+    return sortEntries(Array.from(entries.values()));
+  }
+
+  findEntries(query = "", path = ""): WorkspaceEntry[] {
+    const normalizedQuery = query.trim().toLowerCase();
+    const entries = [
+      ...Array.from(this._directories).map((directoryPath) => ({ path: directoryPath, type: "dir" as const })),
+      ...this.listAllPaths().map((filePath) => ({ path: filePath, type: "file" as const })),
+    ]
+      .filter((entry) => {
+        if (!path) return true;
+        const normalizedPath = normalizeWorkspacePath(path);
+        return entry.path === normalizedPath || entry.path.startsWith(`${normalizedPath}/`);
+      })
+      .filter((entry) => {
+        if (!normalizedQuery) return true;
+        return entry.path.toLowerCase().includes(normalizedQuery);
+      });
+
+    return sortEntries(entries);
+  }
+
+  getLogs(_path: string): string {
+    return "Logs are only available for rendered HTML artifacts in the full runtime.";
+  }
+
+  async executeCommand(params: ArtifactsParams): Promise<string> {
     switch (params.command) {
       case "create":
-        return this.create(params, options);
-      case "update":
-        return this.update(params, options);
-      case "rewrite":
-        return this.rewrite(params, options);
+      case "rewrite": {
+        if (params.content === undefined) {
+          return `Error: ${params.command} command requires content`;
+        }
+        const result = this.writeFile(params.filename, params.content);
+        return typeof result === "string" ? result : result.message;
+      }
+      case "update": {
+        if (params.old_str === undefined || params.new_str === undefined) {
+          return "Error: update command requires old_str and new_str";
+        }
+        const result = this.editFile(params.filename, params.old_str, params.new_str);
+        return typeof result === "string" ? result : result.message;
+      }
       case "get":
-        return this.get(params);
+        return this.readFile(params.filename);
       case "delete":
-        return this.delete(params);
+        return this.deleteFile(params.filename);
       case "logs":
-        return this.getLogs(params);
+        return this.getLogs(params.filename);
       default:
         return `Error: Unknown command ${(params as ArtifactsParams).command}`;
     }
   }
 
-  private create(
-    params: ArtifactsParams,
-    _options: { skipWait?: boolean; silent?: boolean } = {}
-  ): string {
-    if (!params.filename?.trim() || params.content === undefined) {
-      return "Error: create command requires filename and content";
-    }
-    if (this._artifacts.has(params.filename)) {
-      return `Error: File ${params.filename} already exists`;
-    }
-    const artifact: Artifact = {
-      id: createArtifactId(),
-      filename: params.filename,
-      content: params.content,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-    this._artifacts.set(params.filename, artifact);
-    this._artifacts = new Map(this._artifacts);
-    this.emit();
-    return `Created file ${params.filename}`;
-  }
-
-  private update(
-    params: ArtifactsParams,
-    _options: { skipWait?: boolean; silent?: boolean } = {}
-  ): string {
-    const artifact = this._artifacts.get(params.filename);
-    if (!artifact) {
-      const files = Array.from(this._artifacts.keys());
-      if (files.length === 0)
-        return `Error: File ${params.filename} not found. No files have been created yet.`;
-      return `Error: File ${params.filename} not found. Available files: ${files.join(", ")}`;
-    }
-    if (params.old_str === undefined || params.new_str === undefined) {
-      return "Error: update command requires old_str and new_str";
-    }
-    if (!artifact.content.includes(params.old_str)) {
-      return `Error: String not found in file. Here is the full content:\n\n${artifact.content}`;
-    }
-    artifact.content = artifact.content.replace(params.old_str, params.new_str);
-    artifact.updatedAt = new Date();
-    this._artifacts.set(params.filename, artifact);
-    this._artifacts = new Map(this._artifacts);
-    this.emit();
-    return `Updated file ${params.filename}`;
-  }
-
-  private rewrite(
-    params: ArtifactsParams,
-    _options: { skipWait?: boolean; silent?: boolean } = {}
-  ): string {
-    const artifact = this._artifacts.get(params.filename);
-    if (!artifact) {
-      const files = Array.from(this._artifacts.keys());
-      if (files.length === 0)
-        return `Error: File ${params.filename} not found. No files have been created yet.`;
-      return `Error: File ${params.filename} not found. Available files: ${files.join(", ")}`;
-    }
-    if (params.content === undefined) {
-      return "Error: rewrite command requires content";
-    }
-    artifact.content = params.content;
-    artifact.updatedAt = new Date();
-    this._artifacts.set(params.filename, artifact);
-    this._artifacts = new Map(this._artifacts);
-    this.emit();
-    return `Rewrote file ${params.filename}`;
-  }
-
-  private get(params: ArtifactsParams): string {
-    const artifact = this._artifacts.get(params.filename);
-    if (!artifact) {
-      const files = Array.from(this._artifacts.keys());
-      if (files.length === 0)
-        return `Error: File ${params.filename} not found. No files have been created yet.`;
-      return `Error: File ${params.filename} not found. Available files: ${files.join(", ")}`;
-    }
-    return artifact.content;
-  }
-
-  private delete(params: ArtifactsParams): string {
-    const artifact = this._artifacts.get(params.filename);
-    if (!artifact) {
-      const files = Array.from(this._artifacts.keys());
-      if (files.length === 0)
-        return `Error: File ${params.filename} not found. No files have been created yet.`;
-      return `Error: File ${params.filename} not found. Available files: ${files.join(", ")}`;
-    }
-    this._artifacts.delete(params.filename);
-    this._artifacts = new Map(this._artifacts);
-    this.emit();
-    return `Deleted file ${params.filename}`;
-  }
-
-  private getLogs(_params: ArtifactsParams): string {
-    return "Logs are only available for HTML artifacts in the full runtime.";
-  }
-
-  /**
-   * Rebuild artifact state from conversation messages (e.g. when loading a session).
-   */
   reconstructFromMessages(
     messages: Array<AgentMessage | { role: "aborted" } | { role: "artifact" }>
   ): void {
     const toolCalls = new Map<string, ToolCall>();
-    const artifactToolName = "artifacts";
+    const supportedToolNames = new Set(["write", "edit"]);
 
     for (const message of messages) {
-      if (message.role === "assistant" && "content" in message) {
-        for (const block of message.content) {
-          if (
-            typeof block === "object" &&
-            block !== null &&
-            "type" in block &&
-            (block as { type: string }).type === "toolCall" &&
-            (block as { name: string }).name === artifactToolName
-          ) {
-            const tc = block as ToolCall;
-            toolCalls.set(tc.id, tc);
-          }
-        }
-      }
-    }
-
-    const operations: Array<ArtifactsParams & { artifactId?: string }> = [];
-    for (const m of messages) {
-      const msg = m as { role: string } & Partial<ArtifactMessage>;
-      if (msg.role === "artifact") {
-        const am = m as ArtifactMessage;
-        switch (am.action) {
-          case "create":
-            operations.push({
-              artifactId: createArtifactId(`${am.timestamp}:${am.filename}`),
-              command: "create",
-              filename: am.filename,
-              content: am.content,
-            });
-            break;
-          case "update":
-            operations.push({
-              command: "rewrite",
-              filename: am.filename,
-              content: am.content,
-            });
-            break;
-          case "delete":
-            operations.push({ command: "delete", filename: am.filename });
-            break;
-        }
+      if (message.role !== "assistant" || !("content" in message)) {
         continue;
       }
-      if (
-        msg.role === "toolResult" &&
-        (m as { toolName?: string }).toolName === artifactToolName &&
-        !(m as { isError?: boolean }).isError
-      ) {
-        const tr = m as { toolCallId: string; toolName: string };
-        const call = toolCalls.get(tr.toolCallId);
-        if (!call) continue;
-        const params = (call as ToolCall & { arguments: ArtifactsParams }).arguments as ArtifactsParams;
-        if (params.command === "get" || params.command === "logs") continue;
-        operations.push({
-          ...params,
-          artifactId: params.command === "create" ? createArtifactId(tr.toolCallId) : undefined,
-        });
+
+      for (const block of message.content) {
+        if (
+          typeof block === "object" &&
+          block !== null &&
+          "type" in block &&
+          (block as { type: string }).type === "toolCall" &&
+          supportedToolNames.has((block as { name: string }).name)
+        ) {
+          const toolCall = block as ToolCall;
+          toolCalls.set(toolCall.id, toolCall);
+        }
       }
     }
 
     const finalArtifacts = new Map<string, Artifact>();
-    for (const op of operations) {
-      const filename = op.filename;
-      switch (op.command) {
-        case "create": {
-          if (op.content == null) break;
-          const existing = finalArtifacts.get(filename);
-          finalArtifacts.set(filename, {
-            id: existing?.id ?? op.artifactId ?? createArtifactId(filename),
-            filename,
-            content: op.content,
-            createdAt: existing?.createdAt ?? new Date(),
-            updatedAt: new Date(),
-          });
-          break;
+    this.resetDirectories();
+
+    const upsert = (path: string, content: string, artifactId?: string) => {
+      const normalizedPath = normalizeWorkspacePath(path);
+      this.ensureParentDirectories(normalizedPath);
+      const existing = finalArtifacts.get(normalizedPath);
+      finalArtifacts.set(normalizedPath, {
+        id: existing?.id ?? artifactId ?? createArtifactId(normalizedPath),
+        filename: normalizedPath,
+        content,
+        createdAt: existing?.createdAt ?? new Date(),
+        updatedAt: new Date(),
+      });
+    };
+
+    for (const message of messages) {
+      const role = (message as { role?: string }).role;
+
+      if (role === "artifact") {
+        const artifactMessage = message as ArtifactMessage;
+        const normalizedPath = normalizeWorkspacePath(artifactMessage.filename);
+        if (artifactMessage.action === "delete") {
+          finalArtifacts.delete(normalizedPath);
+        } else if (artifactMessage.content !== undefined) {
+          upsert(normalizedPath, artifactMessage.content, createArtifactId(`${artifactMessage.timestamp}:${normalizedPath}`));
         }
-        case "rewrite": {
-          if (op.content == null) break;
-          const existing = finalArtifacts.get(filename);
-          finalArtifacts.set(filename, {
-            id: existing?.id ?? op.artifactId ?? createArtifactId(filename),
-            filename,
-            content: op.content,
-            createdAt: existing?.createdAt ?? new Date(),
-            updatedAt: new Date(),
-          });
-          break;
-        }
-        case "update": {
-          const existing = finalArtifacts.get(filename);
-          if (existing != null && op.old_str !== undefined && op.new_str !== undefined) {
-            finalArtifacts.set(filename, {
-              ...existing,
-              content: existing.content.replace(op.old_str, op.new_str),
-              updatedAt: new Date(),
-            });
+        continue;
+      }
+
+      if (
+        role === "toolResult" &&
+        !(message as { isError?: boolean }).isError
+      ) {
+        const toolResult = message as { toolCallId: string; toolName: string };
+        const toolCall = toolCalls.get(toolResult.toolCallId);
+        if (!toolCall) continue;
+
+        if (toolResult.toolName === "write") {
+          const args = (toolCall as ToolCall & { arguments: { path?: string; content?: string } }).arguments;
+          if (args.path && args.content !== undefined) {
+            upsert(args.path, args.content, createArtifactId(toolResult.toolCallId));
           }
-          break;
+          continue;
         }
-        case "delete":
-          finalArtifacts.delete(filename);
-          break;
-        case "get":
-        case "logs":
-          break;
+
+        if (toolResult.toolName === "edit") {
+          const args = (toolCall as ToolCall & {
+            arguments: { path?: string; old_str?: string; new_str?: string };
+          }).arguments;
+          if (!args.path || args.old_str === undefined || args.new_str === undefined) {
+            continue;
+          }
+
+          const normalizedPath = normalizeWorkspacePath(args.path);
+          const existing = finalArtifacts.get(normalizedPath);
+          if (!existing) continue;
+
+          upsert(
+            normalizedPath,
+            existing.content.replace(args.old_str, args.new_str),
+            existing.id
+          );
+        }
       }
     }
 
     this._artifacts.clear();
-    for (const [filename, artifact] of finalArtifacts.entries()) {
-      this._artifacts.set(filename, artifact);
+    for (const [path, artifact] of finalArtifacts.entries()) {
+      this._artifacts.set(path, artifact);
     }
     this._artifacts = new Map(this._artifacts);
     this.emit();
   }
+}
+
+export function formatWorkspaceEntries(entries: WorkspaceEntry[]): string {
+  if (entries.length === 0) {
+    return "(empty)";
+  }
+
+  return entries
+    .map((entry) => entry.type === "dir" ? `${getDisplayPath(entry.path)}/` : getDisplayPath(entry.path))
+    .join("\n");
 }

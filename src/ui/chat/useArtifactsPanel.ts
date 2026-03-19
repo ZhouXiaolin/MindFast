@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Artifact } from "../../ai/artifacts/types";
 
 export interface ArtifactPanelItem {
@@ -23,6 +23,7 @@ interface UseArtifactsPanelResult {
 export function useArtifactsPanel(artifactsList: ArtifactPanelItem[]): UseArtifactsPanelResult {
   const [activeArtifact, setActiveArtifact] = useState<string | null>(null);
   const [showArtifactsPanel, setShowArtifactsPanel] = useState(true);
+  const prevArtifactCountRef = useRef(0);
 
   const fallbackArtifact = artifactsList[artifactsList.length - 1] ?? null;
   const activeArtifactExists = !!activeArtifact &&
@@ -57,6 +58,18 @@ export function useArtifactsPanel(artifactsList: ArtifactPanelItem[]): UseArtifa
   const selectedArtifact = selectedArtifactId
     ? artifactsList.find((artifact) => artifact.id === selectedArtifactId)?.artifact ?? null
     : null;
+
+  useEffect(() => {
+    const nextCount = artifactsList.length;
+    const prevCount = prevArtifactCountRef.current;
+
+    if (nextCount > prevCount && fallbackArtifact) {
+      setActiveArtifact(fallbackArtifact.id);
+      setShowArtifactsPanel(true);
+    }
+
+    prevArtifactCountRef.current = nextCount;
+  }, [artifactsList, fallbackArtifact]);
 
   return {
     activeArtifact: selectedArtifactId,

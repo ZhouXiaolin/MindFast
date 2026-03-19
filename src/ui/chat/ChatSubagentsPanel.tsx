@@ -60,8 +60,6 @@ function SubtaskRunView({
     }
   }
 
-  const filteredTools = tools.filter((t) => t.name !== "widget");
-
   const messageParts: React.ReactNode[] = [];
   for (const msg of run.messages) {
     if (msg.role === "assistant") {
@@ -69,7 +67,7 @@ function SubtaskRunView({
         <AssistantMessage
           key={messageParts.length}
           message={msg as AssistantMessageType}
-          tools={filteredTools}
+          tools={tools}
           pendingToolCalls={new Set()}
           toolResultsById={toolResultsById}
           isStreaming={false}
@@ -83,7 +81,7 @@ function SubtaskRunView({
       <AssistantMessage
         key="streaming"
         message={run.streamMessage as AssistantMessageType}
-        tools={filteredTools}
+        tools={tools}
         pendingToolCalls={new Set()}
         toolResultsById={toolResultsById}
         isStreaming

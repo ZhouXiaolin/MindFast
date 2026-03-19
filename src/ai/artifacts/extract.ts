@@ -1,5 +1,6 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { SubtaskRun } from "../subagent-types";
+import { isArtifactPath } from "../workspace-types";
 import { ArtifactsStore } from "./store";
 
 export type WorkspaceArtifactKind = "html" | "markdown" | "text";
@@ -68,16 +69,19 @@ export function extractArtifactsFromMessages(
   const store = new ArtifactsStore();
   store.reconstructFromMessages(messages);
 
-  return store.getSnapshot().map(([, artifact]) =>
-    toSavedArtifactSummary(
-      getArtifactId(artifact, `main:${artifact.filename}`),
-      sessionId,
-      sessionTitle,
-      updatedAt,
-      artifact.filename,
-      artifact.content
-    )
-  );
+  return store
+    .getSnapshot()
+    .filter(([, artifact]) => isArtifactPath(artifact.filename))
+    .map(([, artifact]) =>
+      toSavedArtifactSummary(
+        getArtifactId(artifact, `main:${artifact.filename}`),
+        sessionId,
+        sessionTitle,
+        updatedAt,
+        artifact.filename,
+        artifact.content
+      )
+    );
 }
 
 export function extractArtifactsFromSubtaskRuns(
@@ -89,15 +93,17 @@ export function extractArtifactsFromSubtaskRuns(
   if (!runs) return [];
 
   return Object.entries(runs).flatMap(([runKey, run]) =>
-    run.artifacts.map((artifact, index) =>
-      toSavedArtifactSummary(
-        getArtifactId(artifact, `subtask:${runKey}:${index}:${artifact.filename}`),
-        sessionId,
-        sessionTitle,
-        updatedAt,
-        artifact.filename,
-        artifact.content
+    run.artifacts
+      .filter((artifact) => isArtifactPath(artifact.filename))
+      .map((artifact, index) =>
+        toSavedArtifactSummary(
+          getArtifactId(artifact, `subtask:${runKey}:${index}:${artifact.filename}`),
+          sessionId,
+          sessionTitle,
+          updatedAt,
+          artifact.filename,
+          artifact.content
+        )
       )
-    )
   );
 }
