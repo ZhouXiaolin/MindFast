@@ -17,6 +17,7 @@ import { useSubagentPanel } from "./useSubagentPanel";
 import { ChatSubagentsPanel } from "./ChatSubagentsPanel";
 import { SubagentToolProvider } from "./tools";
 import { useSubtaskRuns } from "./useSubtaskRuns";
+import { collectSilentAppendToolCallIds, shouldDisplayToolResult } from "./silentAppend";
 import { isArtifactPath } from "../../ai/workspace-types";
 interface ChatUIProps {
   sessionId: string;
@@ -202,10 +203,10 @@ export function ChatUI({ sessionId }: ChatUIProps) {
 
   const toolResultsById = useRef(new Map<string, ToolResultMessage>()).current;
   toolResultsById.clear();
+  const silentToolCallIds = collectSilentAppendToolCallIds(messages);
   for (const m of messages) {
-    if (m.role === "toolResult") {
-      const tr = m as ToolResultMessage & { toolCallId: string };
-      toolResultsById.set(tr.toolCallId, m as ToolResultMessage);
+    if (shouldDisplayToolResult(m, silentToolCallIds)) {
+      toolResultsById.set(m.toolCallId, m);
     }
   }
 

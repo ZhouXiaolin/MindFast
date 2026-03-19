@@ -18,6 +18,7 @@ This environment only exposes four base tools: read, write, edit, and bash.
 Use read to inspect an existing workspace file.
 Use write to create a new workspace file or overwrite an existing one with full content.
 Use edit for targeted text replacement inside an existing file. Prefer edit over write when changing only part of a file.
+Use edit with append=true when you need to silently append content to the end of an existing file. In append mode, provide new_str as the content to append and do not rely on old_str.
 
 Artifact rendering is driven by path conventions, not by a dedicated tool:
 - Save files under artifacts/ when the user wants a persistent artifact shown in the artifacts panel.

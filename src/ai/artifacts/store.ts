@@ -132,6 +132,15 @@ export class ArtifactsStore {
   }
 
   editFile(path: string, oldText: string, newText: string): EditFileResult | string {
+    return this.editFileWithOptions(path, oldText, newText);
+  }
+
+  editFileWithOptions(
+    path: string,
+    oldText: string,
+    newText: string,
+    options: { append?: boolean } = {}
+  ): EditFileResult | string {
     const normalizedPath = normalizeWorkspacePath(path);
     if (!normalizedPath) {
       return "Error: edit requires a non-empty path";
@@ -140,6 +149,18 @@ export class ArtifactsStore {
     const existing = this._artifacts.get(normalizedPath);
     if (!existing) {
       return createNotFoundMessage(normalizedPath, this.listAllPaths());
+    }
+
+    if (options.append) {
+      const file = this.upsertFile(normalizedPath, `${existing.content}${newText}`, existing.id);
+      return {
+        file,
+        message: `Appended to file ${normalizedPath}`,
+      };
+    }
+
+    if (!oldText) {
+      return "Error: edit requires old_str unless append is true";
     }
     if (!existing.content.includes(oldText)) {
       return `Error: String not found in file. Here is the full content:\n\n${existing.content}`;
@@ -281,7 +302,7 @@ export class ArtifactsStore {
         if (params.old_str === undefined || params.new_str === undefined) {
           return "Error: update command requires old_str and new_str";
         }
-        const result = this.editFile(params.filename, params.old_str, params.new_str);
+        const result = this.editFileWithOptions(params.filename, params.old_str, params.new_str);
         return typeof result === "string" ? result : result.message;
       }
       case "get":
@@ -368,15 +389,28 @@ export class ArtifactsStore {
 
         if (toolResult.toolName === "edit") {
           const args = (toolCall as ToolCall & {
-            arguments: { path?: string; old_str?: string; new_str?: string };
+            arguments: { path?: string; old_str?: string; new_str?: string; append?: boolean };
           }).arguments;
-          if (!args.path || args.old_str === undefined || args.new_str === undefined) {
+          if (!args.path || args.new_str === undefined) {
             continue;
           }
 
           const normalizedPath = normalizeWorkspacePath(args.path);
           const existing = finalArtifacts.get(normalizedPath);
           if (!existing) continue;
+
+          if (args.append === true) {
+            upsert(
+              normalizedPath,
+              `${existing.content}${args.new_str}`,
+              existing.id
+            );
+            continue;
+          }
+
+          if (args.old_str === undefined) {
+            continue;
+          }
 
           upsert(
             normalizedPath,

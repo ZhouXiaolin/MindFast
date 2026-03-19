@@ -16,8 +16,9 @@ const writeParamsSchema = Type.Object({
 
 const editParamsSchema = Type.Object({
   path: Type.String({ description: "Workspace path to edit" }),
-  old_str: Type.String({ description: "Exact text to replace" }),
+  old_str: Type.Optional(Type.String({ description: "Exact text to replace. Required unless append is true." })),
   new_str: Type.String({ description: "Replacement text" }),
+  append: Type.Optional(Type.Boolean({ description: "When true, append new_str to the end of the file instead of replacing old_str." })),
 });
 
 type ReadToolArgs = Static<typeof readParamsSchema>;
@@ -98,10 +99,13 @@ export function createEditTool(
   return {
     label: "Edit",
     name: "edit",
-    description: "Edit a workspace file by replacing exact text.",
+    description: "Edit a workspace file by replacing exact text, or append to the end when append is true.",
     parameters: editParamsSchema,
     execute: async (_toolCallId: string, args: EditToolArgs) => {
-      const result = store.editFile(args.path, args.old_str, args.new_str);
+      const isAppend = args.append === true;
+      const result = store.editFileWithOptions(args.path, args.old_str ?? "", args.new_str, {
+        append: isAppend,
+      });
       if (typeof result === "string") {
         return {
           content: [{ type: "text", text: result }],
@@ -109,7 +113,11 @@ export function createEditTool(
         };
       }
 
-      appendArtifactMessage(getAgent(), "update", result.file.filename, result.file.content);
+      // Only send artifact message for non-append edits
+      // Append operations are silent updates to existing artifacts
+      if (!isAppend) {
+        appendArtifactMessage(getAgent(), "update", result.file.filename, result.file.content);
+      }
 
       return {
         content: [{ type: "text", text: result.message }],
@@ -117,6 +125,7 @@ export function createEditTool(
           path: result.file.filename,
           content: result.file.content,
           action: "update",
+          append: isAppend,
         },
       };
     },

@@ -2,6 +2,11 @@ import type { AgentMessage, AgentTool } from "@mariozechner/pi-agent-core";
 import type { AssistantMessage as AssistantMessageType, ToolResultMessage } from "@mariozechner/pi-ai";
 import { UserMessage } from "./UserMessage";
 import { AssistantMessage } from "./AssistantMessage";
+import {
+  collectSilentAppendToolCallIds,
+  sanitizeAssistantMessageForDisplay,
+  shouldDisplayToolResult,
+} from "./silentAppend";
 
 interface MessageListProps {
   messages: AgentMessage[];
@@ -22,11 +27,11 @@ export function MessageList({
   onEditUserMessage,
   onRetryUserMessage,
 }: MessageListProps) {
+  const silentToolCallIds = collectSilentAppendToolCallIds(messages);
   const toolResultsById = new Map<string, ToolResultMessage>();
   for (const m of messages) {
-    if (m.role === "toolResult") {
-      const tr = m as ToolResultMessage & { toolCallId: string };
-      toolResultsById.set(tr.toolCallId, m as ToolResultMessage);
+    if (shouldDisplayToolResult(m, silentToolCallIds)) {
+      toolResultsById.set(m.toolCallId, m);
     }
   }
 
@@ -48,7 +53,8 @@ export function MessageList({
       );
       index++;
     } else if (msg.role === "assistant") {
-      const amsg = msg as AssistantMessageType;
+      const amsg = sanitizeAssistantMessageForDisplay(msg as AssistantMessageType);
+      if (!amsg) continue;
       items.push(
         <AssistantMessage
           key={`msg-${index}`}
