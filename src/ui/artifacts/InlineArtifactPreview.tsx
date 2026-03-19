@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ArtifactRendererProps } from "./types";
 import { getFileType } from "./types";
 import { SandboxedIframe } from "./SandboxedIframe";
@@ -46,12 +47,18 @@ export function InlineArtifactPreview({ filename, content, growWithContent = fal
   const boxClass = "overflow-hidden rounded-xl border border-sidebar-soft bg-sidebar-panel";
   const maxHeight = growWithContent ? GROW_MAX_HEIGHT : INLINE_PREVIEW_MAX_HEIGHT;
 
+  const [iframeHeight, setIframeHeight] = useState(200);
+
   if (fileType === "html") {
+    const containerStyle = growWithContent
+      ? { height: iframeHeight }
+      : { minHeight: 200, maxHeight };
     return (
-      <div className={boxClass} style={{ minHeight: 200, maxHeight }}>
+      <div className={boxClass} style={containerStyle}>
         <SandboxedIframe
           htmlContent={content}
-          className="w-full h-full min-h-[200px] border-0 bg-white rounded-b-xl"
+          className="w-full h-full border-0 bg-white rounded-b-xl"
+          onHeightChange={growWithContent ? setIframeHeight : undefined}
         />
       </div>
     );
