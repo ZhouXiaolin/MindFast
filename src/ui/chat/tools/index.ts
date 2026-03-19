@@ -27,6 +27,7 @@ registerToolRenderer("artifacts", {
     params: unknown,
     result: ToolResultMessage | undefined,
     isStreaming?: boolean,
+    _toolCallId?: string,
     onOpenArtifact?: (filename: string) => void
   ): ToolRenderResult {
     return renderArtifactsTool(
@@ -45,6 +46,7 @@ registerToolRenderer("widget", {
     params: unknown,
     result: ToolResultMessage | undefined,
     isStreaming?: boolean,
+    _toolCallId?: string,
     _onOpenArtifact?: (filename: string) => void
   ): ToolRenderResult {
     return renderWidgetTool(
@@ -62,13 +64,15 @@ registerToolRenderer(SUBAGENT_TOOL_NAME, {
     params: unknown,
     result: ToolResultMessage | undefined,
     isStreaming?: boolean,
+    toolCallId?: string,
     _onOpenArtifact?: (filename: string) => void
   ): ToolRenderResult {
     return renderSubagentTool(
       toolName,
       params as SubtasksToolParams | undefined,
       result,
-      isStreaming
+      isStreaming,
+      toolCallId
     );
   },
 });
@@ -78,11 +82,12 @@ export function renderTool(
   params: unknown,
   result: ToolResultMessage | undefined,
   isStreaming?: boolean,
+  toolCallId?: string,
   onOpenArtifact?: (filename: string) => void
 ): ToolRenderResult {
   const renderer = getToolRenderer(toolName);
   if (renderer) {
-    return renderer.render(toolName, params, result, isStreaming, onOpenArtifact);
+    return renderer.render(toolName, params, result, isStreaming, toolCallId, onOpenArtifact);
   }
   return renderDefaultTool(toolName, params, result, isStreaming);
 }

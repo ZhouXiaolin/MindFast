@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { MessageList } from "./MessageList";
 import { StreamingMessageContainer } from "./StreamingMessageContainer";
@@ -9,7 +9,7 @@ import { useChatRuntime } from "./useChatRuntime";
 import { useChatPersistence } from "./useChatPersistence";
 import { useChatModelMenu } from "./useChatModelMenu";
 import { useChatUsage } from "./useChatUsage";
-import { useArtifactsPanel } from "./useArtifactsPanel";
+import { useArtifactsPanel, type ArtifactPanelItem } from "./useArtifactsPanel";
 import { ChatModelPicker } from "./ChatModelPicker";
 import { ChatArtifactsPanel } from "./ChatArtifactsPanel";
 import { useSubagentTasks } from "./useSubagentTasks";
@@ -17,7 +17,6 @@ import { useSubagentPanel } from "./useSubagentPanel";
 import { ChatSubagentsPanel } from "./ChatSubagentsPanel";
 import { SubagentToolProvider } from "./tools";
 import { useSubtaskRuns } from "./useSubtaskRuns";
-
 interface ChatUIProps {
   sessionId: string;
 }
@@ -61,17 +60,6 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     syncAgentState,
   });
   const { usageText } = useChatUsage(messages);
-  const {
-    hasArtifacts,
-    openArtifact,
-    openPanel,
-    closePanel,
-    selectedArtifact,
-    selectedFilename,
-    selectArtifact,
-    showArtifactsPanel,
-  } = useArtifactsPanel(artifactsList);
-
   const pendingToolCalls = agent?.state.pendingToolCalls ?? new Set<string>();
   const subtaskRuns = useSubtaskRuns();
   const {
@@ -87,6 +75,39 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     closePanel: closeSubagentPanel,
     selectTask: selectSubagentTask,
   } = useSubagentPanel(subagentTasks);
+
+  const artifactItems = useMemo<ArtifactPanelItem[]>(() => {
+    const panelItems: ArtifactPanelItem[] = artifactsList.map((artifact) => ({
+      id: `main:${artifact.filename}`,
+      artifact,
+      kind: "main",
+      label: artifact.filename,
+    }));
+
+    for (const task of subagentTasks) {
+      for (const [index, artifact] of (task.run?.artifacts ?? []).entries()) {
+        panelItems.push({
+          id: `subtask:${task.runKey}:${artifact.filename}:${index}`,
+          artifact,
+          kind: "subtask",
+          label: `${artifact.filename} · ${task.label}`,
+        });
+      }
+    }
+
+    return panelItems;
+  }, [artifactsList, subagentTasks]);
+
+  const {
+    hasArtifacts,
+    openArtifact,
+    openPanel,
+    closePanel,
+    selectedArtifact,
+    selectedArtifactId,
+    selectArtifact,
+    showArtifactsPanel,
+  } = useArtifactsPanel(artifactItems);
 
   const scrollToBottom = useCallback(() => {
     if (!autoScrollRef.current) return;
@@ -143,7 +164,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
       try {
         agent.abort();
         agent.replaceMessages(messages.slice(0, messageIndex));
-        syncAgentState(agent);
+        syncAgentState(agent, undefined, { reconstructArtifacts: true });
         await agent.prompt(t);
       } catch (error) {
         console.error(error);
@@ -164,7 +185,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
       try {
         agent.abort();
         agent.replaceMessages(messages.slice(0, messageIndex));
-        syncAgentState(agent);
+        syncAgentState(agent, undefined, { reconstructArtifacts: true });
         await agent.prompt(t);
       } catch (error) {
         console.error(error);
@@ -201,7 +222,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
         className={cn("chat-column-shell flex h-full min-w-0 flex-1 flex-col", CHAT_FONT_CLASS[chatFont])}
         style={{ minHeight: 0 }}
       >
-        <div className="chat-topbar flex shrink-0 items-center justify-between border-b border-sidebar-soft px-4 py-3">
+        <div className="chat-topbar flex shrink-0 items-center justify-between px-4 py-3">
           <ChatModelPicker
             currentModel={currentModel}
             enabledModels={enabledModels}
@@ -285,7 +306,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
         </div>
 
         {!isEmptyChat ? (
-          <div className="chat-composer-dock shrink-0 border-t border-sidebar-soft">
+          <div className="chat-composer-dock shrink-0">
             <div className="mx-auto max-w-3xl px-4 pb-4 pt-3">
               <MessageEditor
                 value={input}
@@ -324,9 +345,9 @@ export function ChatUI({ sessionId }: ChatUIProps) {
 
       {hasArtifacts && !showSubagentsPanel ? (
         <ChatArtifactsPanel
-          artifactsList={artifactsList}
+          artifactsList={artifactItems}
           selectedArtifact={selectedArtifact}
-          selectedFilename={selectedFilename}
+          selectedArtifactId={selectedArtifactId}
           showArtifactsPanel={showArtifactsPanel}
           onClosePanel={closePanel}
           onOpenPanel={openPanel}

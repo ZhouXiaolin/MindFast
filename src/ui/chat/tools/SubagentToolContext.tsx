@@ -3,7 +3,7 @@ import type { SubtaskStatus } from "../../../ai/subagent-types";
 
 interface SubagentToolContextValue {
 	statusMap: Map<string, SubtaskStatus>;
-	onSelectSubagent: (id: string) => void;
+	onSelectSubagent: (runKey: string) => void;
 }
 
 const SubagentToolContext = createContext<SubagentToolContextValue | null>(null);
@@ -15,7 +15,7 @@ export function SubagentToolProvider({
 }: {
 	children: React.ReactNode;
 	statusMap: Map<string, SubtaskStatus>;
-	onSelectSubagent: (id: string) => void;
+	onSelectSubagent: (runKey: string) => void;
 }) {
 	// Create a stable map reference to avoid unnecessary re-renders
 	const stableStatusMap = useMemo(() => statusMap, [statusMap]);

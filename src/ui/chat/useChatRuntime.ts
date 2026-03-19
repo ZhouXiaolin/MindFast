@@ -20,7 +20,11 @@ interface ChatRuntimeState {
 interface UseChatRuntimeResult extends ChatRuntimeState {
   isHydratingRef: React.MutableRefObject<boolean>;
   isSessionReady: () => boolean;
-  syncAgentState: (nextAgent: Agent, store?: ArtifactsStore | null) => void;
+  syncAgentState: (
+    nextAgent: Agent,
+    store?: ArtifactsStore | null,
+    options?: { reconstructArtifacts?: boolean }
+  ) => void;
 }
 
 function cloneStreamMessage(message: AgentMessage | null): AgentMessage | null {
@@ -46,9 +50,15 @@ export function useChatRuntime(sessionId: string): UseChatRuntimeResult {
   const hydratedSessionRef = useRef<string | null>(null);
   const isHydratingRef = useRef(false);
 
-  const syncAgentState = useCallback((nextAgent: Agent, store?: ArtifactsStore | null) => {
+  const syncAgentState = useCallback((
+    nextAgent: Agent,
+    store?: ArtifactsStore | null,
+    options?: { reconstructArtifacts?: boolean }
+  ) => {
     const nextStore = store ?? artifactsStoreRef.current;
-    nextStore?.reconstructFromMessages(nextAgent.state.messages);
+    if (options?.reconstructArtifacts) {
+      nextStore?.reconstructFromMessages(nextAgent.state.messages);
+    }
     setRuntimeState((state) => ({
       ...state,
       currentModel: nextAgent.state.model ?? null,
@@ -66,7 +76,7 @@ export function useChatRuntime(sessionId: string): UseChatRuntimeResult {
       .then(({ agent, artifactsStore }) => {
         setRuntimeState((state) => ({ ...state, agent }));
         artifactsStoreRef.current = artifactsStore;
-        syncAgentState(agent, artifactsStore);
+        syncAgentState(agent, artifactsStore, { reconstructArtifacts: true });
         setRuntimeState((state) => ({
           ...state,
           artifactsList: artifactsStore.getSnapshot().map(([, artifact]) => artifact),
@@ -132,7 +142,7 @@ export function useChatRuntime(sessionId: string): UseChatRuntimeResult {
         await initializeSubtaskRuntime(sessionId, storage.subtaskRuns);
 
         hydratedSessionRef.current = sessionId;
-        syncAgentState(agent);
+        syncAgentState(agent, undefined, { reconstructArtifacts: true });
       } catch (error) {
         console.error("Failed to hydrate chat session:", error);
       } finally {

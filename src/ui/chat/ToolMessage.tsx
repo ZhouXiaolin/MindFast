@@ -39,6 +39,7 @@ export function ToolMessage({
     toolCall.arguments,
     effectiveResult,
     isStreaming || pending,
+    toolCall.id,
     onOpenArtifact
   );
 

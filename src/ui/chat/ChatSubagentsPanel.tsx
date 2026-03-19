@@ -154,12 +154,12 @@ export function ChatSubagentsPanel({
         <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-sidebar-soft px-4 py-3">
           {tasks.map((task) => (
             <button
-              key={task.id}
+              key={task.runKey}
               type="button"
-              onClick={() => onSelectTask(task.id)}
+              onClick={() => onSelectTask(task.runKey)}
               className={cn(
                 "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs whitespace-nowrap transition-colors",
-                selectedTaskId === task.id
+                selectedTaskId === task.runKey
                   ? "border-accent/30 bg-accent/10 text-sidebar"
                   : "border-sidebar-soft bg-sidebar-panel text-sidebar-muted hover:bg-sidebar-panel-strong hover:text-sidebar"
               )}
@@ -182,7 +182,7 @@ export function ChatSubagentsPanel({
       {!showPanel && tasks.length > 0 ? (
         <button
           type="button"
-          onClick={() => onSelectTask(tasks[0].id)}
+          onClick={() => onSelectTask(tasks[0].runKey)}
           className="absolute left-1/2 top-4 z-30 -translate-x-1/2 rounded-full border border-sidebar-soft bg-sidebar-panel px-3 py-1.5 text-xs text-sidebar shadow-lg transition-colors hover:bg-sidebar-panel-strong"
           title="Show subtasks"
         >

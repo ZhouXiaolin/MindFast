@@ -25,7 +25,7 @@ export function useSubagentPanel(tasks: SubtaskWithResult[]): UseSubagentPanelRe
   }, [tasks.length]);
 
   const selectedTask = selectedTaskId
-    ? tasks.find((t) => t.id === selectedTaskId) ?? null
+    ? tasks.find((t) => t.runKey === selectedTaskId) ?? null
     : null;
 
   const openPanel = useCallback((id?: string) => {

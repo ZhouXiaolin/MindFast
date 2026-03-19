@@ -12,17 +12,35 @@ let currentSessionId: string | null = null;
 let subtaskRunsStore: SubtaskRunsStore | null = null;
 let flushScheduled = false;
 let persistTimeout: ReturnType<typeof setTimeout> | null = null;
+let lastPersistedSignature = "";
 
 const PERSIST_DELAY_MS = 300; // Batch updates within 300ms
 
-function emit() {
+function shouldPersistRun(run: SubtaskRun): boolean {
+	return !run.isStreaming;
+}
+
+function getPersistedRunsObject(): Record<string, SubtaskRun> {
+	const runsObj: Record<string, SubtaskRun> = {};
+	for (const [id, run] of subtaskRuns) {
+		if (!shouldPersistRun(run)) continue;
+		runsObj[id] = run;
+	}
+	return runsObj;
+}
+
+function getRunsSignature(runs: Record<string, SubtaskRun>): string {
+	return JSON.stringify(runs);
+}
+
+function emit(schedulePersist = true) {
 	snapshot = new Map(subtaskRuns);
 	for (const listener of listeners) {
 		listener();
 	}
 
 	// Schedule persistence if we have a session
-	if (currentSessionId && subtaskRunsStore && !flushScheduled) {
+	if (schedulePersist && currentSessionId && subtaskRunsStore && !flushScheduled) {
 		flushScheduled = true;
 		persistTimeout = setTimeout(() => {
 			void flushToStorage();
@@ -35,11 +53,18 @@ async function flushToStorage() {
 	if (!currentSessionId || !subtaskRunsStore) return;
 
 	try {
-		const runsObj: Record<string, SubtaskRun> = {};
-		for (const [id, run] of subtaskRuns) {
-			runsObj[id] = run;
+		const runsObj = getPersistedRunsObject();
+		const nextSignature = getRunsSignature(runsObj);
+		if (nextSignature === lastPersistedSignature) {
+			return;
 		}
-		await subtaskRunsStore.saveSessionRuns(currentSessionId, runsObj);
+
+		if (Object.keys(runsObj).length === 0) {
+			await subtaskRunsStore.deleteSessionRuns(currentSessionId);
+		} else {
+			await subtaskRunsStore.saveSessionRuns(currentSessionId, runsObj);
+		}
+		lastPersistedSignature = nextSignature;
 	} catch (error) {
 		console.error("Failed to persist subtask runs:", error);
 	}
@@ -66,6 +91,7 @@ export async function initializeSubtaskRuntime(
 	subtaskRuns.clear();
 	currentSessionId = sessionId;
 	subtaskRunsStore = store;
+	lastPersistedSignature = "";
 
 	// Load runs from storage for this session
 	const runsObj = await store.getSessionRuns(sessionId);
@@ -73,6 +99,7 @@ export async function initializeSubtaskRuntime(
 		for (const [id, run] of Object.entries(runsObj)) {
 			subtaskRuns.set(id, run);
 		}
+		lastPersistedSignature = getRunsSignature(runsObj);
 	}
 
 	// Notify listeners after loading
@@ -115,31 +142,47 @@ export async function clearSubtaskRuntime(): Promise<void> {
 	subtaskRuns.clear();
 	currentSessionId = null;
 	subtaskRunsStore = null;
+	lastPersistedSignature = "";
 	snapshot = new Map();
 	emit();
 }
 
 export function upsertSubtaskRun(id: string, run: SubtaskRun): void {
+	const current = subtaskRuns.get(id);
+	const shouldSchedulePersist = shouldPersistRun(run) || (current ? shouldPersistRun(current) : false);
 	subtaskRuns.set(id, run);
-	emit();
+	emit(shouldSchedulePersist);
 }
 
 export function patchSubtaskRun(id: string, patch: Partial<SubtaskRun>): void {
 	const current = subtaskRuns.get(id);
 	if (!current) return;
-	subtaskRuns.set(id, { ...current, ...patch });
-	emit();
+	const nextRun = { ...current, ...patch };
+	const shouldSchedulePersist = shouldPersistRun(current) || shouldPersistRun(nextRun);
+	subtaskRuns.set(id, nextRun);
+	emit(shouldSchedulePersist);
 }
 
 export function clearSubtaskRuns(ids?: string[]): void {
+	let shouldSchedulePersist = false;
 	if (ids && ids.length > 0) {
 		for (const id of ids) {
+			const current = subtaskRuns.get(id);
+			if (current && shouldPersistRun(current)) {
+				shouldSchedulePersist = true;
+			}
 			subtaskRuns.delete(id);
 		}
 	} else {
+		for (const run of subtaskRuns.values()) {
+			if (shouldPersistRun(run)) {
+				shouldSchedulePersist = true;
+				break;
+			}
+		}
 		subtaskRuns.clear();
 	}
-	emit();
+	emit(shouldSchedulePersist);
 }
 
 export function getSubtaskRunsSnapshot(): Map<string, SubtaskRun> {

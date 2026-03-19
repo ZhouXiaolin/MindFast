@@ -7,6 +7,7 @@ import { ArtifactsStore } from "./artifacts/store";
 import { createArtifactsTool } from "./artifacts/tool";
 import { once } from "./once";
 import {
+  getSubtaskRunKey,
   type Subtask,
   type SubtasksToolParams,
   SUBAGENT_TOOL_NAME,
@@ -36,6 +37,7 @@ const SUBTASKS_TOOL_DESCRIPTION = [
 ].join(" ");
 
 const MAX_SUBTASK_RETURN_TOKENS = 200;
+const MAX_PARALLEL_SUBTASKS = 3;
 const SUBTASK_SUMMARY_SYSTEM_PROMPT = [
   "You compress a subtask result for a parent agent.",
   "Return plain text only.",
@@ -89,6 +91,32 @@ function extractLastAssistantText(messages: AgentMessage[]): string {
   return "";
 }
 
+async function mapWithConcurrency<TInput, TOutput>(
+  items: TInput[],
+  concurrency: number,
+  mapper: (item: TInput, index: number) => Promise<TOutput>
+): Promise<TOutput[]> {
+  if (items.length === 0) return [];
+
+  const results = new Array<TOutput>(items.length);
+  let nextIndex = 0;
+
+  const worker = async () => {
+    while (true) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      if (currentIndex >= items.length) {
+        return;
+      }
+      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+    }
+  };
+
+  const workerCount = Math.max(1, Math.min(concurrency, items.length));
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
+}
+
 async function summarizeSubtaskResult(
   text: string,
   childAgent: Agent,
@@ -138,7 +166,7 @@ export function createSubtasksTool(
     name: SUBAGENT_TOOL_NAME,
     description: SUBTASKS_TOOL_DESCRIPTION,
     parameters: subtasksParamsSchema,
-    execute: async (_toolCallId: string, args: SubtasksSchema, signal?: AbortSignal) => {
+    execute: async (toolCallId: string, args: SubtasksSchema, signal?: AbortSignal) => {
       const parentAgent = getAgent();
       if (!parentAgent) {
         return {
@@ -148,15 +176,16 @@ export function createSubtasksTool(
       }
 
       const subtasks = mergeUniqueSubtasks(args.subtasks as Subtask[]);
-      clearSubtaskRuns(subtasks.map((st) => st.id));
+      clearSubtaskRuns(subtasks.map((st) => getSubtaskRunKey(toolCallId, st.id)));
 
       const runOne = async (
         subtask: Subtask
-      ): Promise<{ ok: boolean; id: string; summary: string; tokenCount: number; summarizedFrom?: number }> => {
+      ): Promise<{ ok: boolean; id: string; label: string; summary: string; tokenCount: number; summarizedFrom?: number }> => {
         let childAgent: Agent | null = null;
         const artifactsStore = new ArtifactsStore();
         let unsubscribe: (() => void) | undefined;
         let abortListener: (() => void) | undefined;
+        const runKey = getSubtaskRunKey(toolCallId, subtask.id);
 
         try {
           let currentChildAgent: Agent | null = null;
@@ -179,8 +208,7 @@ export function createSubtasksTool(
           currentChildAgent = childAgent;
 
           const syncRunState = () => {
-            artifactsStore.reconstructFromMessages(childAgent!.state.messages);
-            upsertSubtaskRun(subtask.id, {
+            upsertSubtaskRun(runKey, {
               messages: childAgent!.state.messages.slice(),
               streamMessage: cloneMessage(childAgent!.state.streamMessage ?? null),
               isStreaming: childAgent!.state.isStreaming,
@@ -189,7 +217,7 @@ export function createSubtasksTool(
           };
 
           // initialize pending state immediately so UI can show running status
-          upsertSubtaskRun(subtask.id, {
+          upsertSubtaskRun(runKey, {
             messages: [],
             streamMessage: null,
             isStreaming: true,
@@ -212,16 +240,23 @@ export function createSubtasksTool(
           syncRunState();
           const rawSummary = extractLastAssistantText(childAgent.state.messages);
           const summary = await summarizeSubtaskResult(rawSummary, childAgent, storage, signal);
-          return { ok: true, id: subtask.id, summary: summary.text, tokenCount: summary.tokenCount, summarizedFrom: summary.summarizedFrom };
+          return {
+            ok: true,
+            id: subtask.id,
+            label: subtask.label,
+            summary: summary.text,
+            tokenCount: summary.tokenCount,
+            summarizedFrom: summary.summarizedFrom,
+          };
         } catch (error) {
-          upsertSubtaskRun(subtask.id, {
+          upsertSubtaskRun(runKey, {
             messages: childAgent?.state.messages.slice() ?? [],
             streamMessage: cloneMessage(childAgent?.state.streamMessage ?? null),
             isStreaming: false,
-            artifacts: [],
+            artifacts: artifactsStore.getSnapshot().map(([, artifact]) => artifact),
             error: error instanceof Error ? error.message : "Subtask failed",
           });
-          return { ok: false, id: subtask.id, summary: "", tokenCount: 0 };
+          return { ok: false, id: subtask.id, label: subtask.label, summary: "", tokenCount: 0 };
         } finally {
           unsubscribe?.();
           abortListener?.();
@@ -229,13 +264,12 @@ export function createSubtasksTool(
         }
       };
 
-      const results = await Promise.all(subtasks.map((subtask) => runOne(subtask)));
+      const results = await mapWithConcurrency(subtasks, MAX_PARALLEL_SUBTASKS, runOne);
       const completed = results.filter((r) => r.ok).length;
       const failed = results.length - completed;
 
       const lines = results.map((r) => {
-        const task = subtasks.find((s) => s.id === r.id);
-        const label = task?.label ?? r.id;
+        const label = r.label || r.id;
         if (r.ok) {
           const tokenText = r.summarizedFrom
             ? `${r.tokenCount} tokens, summarized from ${r.summarizedFrom}`

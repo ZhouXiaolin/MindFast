@@ -1,21 +1,21 @@
-import type { Artifact } from "../../ai/artifacts/types";
 import { cn } from "../../utils/cn";
 import { ArtifactPreview } from "../artifacts/ArtifactPreview";
+import type { ArtifactPanelItem } from "./useArtifactsPanel";
 
 interface ChatArtifactsPanelProps {
-  artifactsList: Artifact[];
-  selectedArtifact: Artifact | null;
-  selectedFilename: string | null;
+  artifactsList: ArtifactPanelItem[];
+  selectedArtifact: ArtifactPanelItem["artifact"] | null;
+  selectedArtifactId: string | null;
   showArtifactsPanel: boolean;
   onClosePanel: () => void;
   onOpenPanel: () => void;
-  onSelectArtifact: (filename: string) => void;
+  onSelectArtifact: (artifactId: string) => void;
 }
 
 export function ChatArtifactsPanel({
   artifactsList,
   selectedArtifact,
-  selectedFilename,
+  selectedArtifactId,
   showArtifactsPanel,
   onClosePanel,
   onOpenPanel,
@@ -53,17 +53,18 @@ export function ChatArtifactsPanel({
         <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-sidebar-soft px-4 py-3">
           {artifactsList.map((artifact) => (
             <button
-              key={artifact.filename}
+              key={artifact.id}
               type="button"
-              onClick={() => onSelectArtifact(artifact.filename)}
+              onClick={() => onSelectArtifact(artifact.id)}
+              title={artifact.label}
               className={cn(
                 "shrink-0 rounded-full border px-3 py-1.5 text-xs font-mono whitespace-nowrap transition-colors",
-                selectedFilename === artifact.filename
+                selectedArtifactId === artifact.id
                   ? "border-accent/30 bg-accent/10 text-sidebar"
                   : "border-sidebar-soft bg-sidebar-panel text-sidebar-muted hover:bg-sidebar-panel-strong hover:text-sidebar"
               )}
             >
-              {artifact.filename}
+              {artifact.label}
             </button>
           ))}
         </div>

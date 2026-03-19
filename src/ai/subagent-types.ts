@@ -9,6 +9,10 @@ export interface Subtask {
   prompt: string;
 }
 
+export function getSubtaskRunKey(toolCallId: string, subtaskId: string): string {
+  return `${toolCallId}:${subtaskId}`;
+}
+
 export type SubtaskStatus = "pending" | "running" | "completed" | "failed";
 
 export interface SubtaskRun {
@@ -20,6 +24,8 @@ export interface SubtaskRun {
 }
 
 export interface SubtaskWithResult extends Subtask {
+  toolCallId: string;
+  runKey: string;
   status: SubtaskStatus;
   run?: SubtaskRun;
 }

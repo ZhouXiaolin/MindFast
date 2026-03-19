@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { AssistantMessage, ToolResultMessage } from "@mariozechner/pi-ai";
 import {
+  getSubtaskRunKey,
   SUBAGENT_TOOL_NAME,
   type Subtask,
   type SubtaskStatus,
@@ -23,7 +24,7 @@ interface SubagentTasksResult {
  *
  * Status is derived from pendingToolCalls and toolResult availability.
  * The overall tool call wrapping all subtasks has a single toolCallId;
- * individual subtask runs are tracked by a map keyed by subtask id.
+ * individual subtask runs are tracked by a map keyed by toolCallId + subtask id.
  */
 export function useSubagentTasks(
   messages: AgentMessage[],
@@ -56,7 +57,8 @@ export function useSubagentTasks(
         const hasResult = toolResultsById.has(tc.id);
 
         for (const st of subtasks) {
-          const run = subtaskRuns?.get(st.id);
+          const runKey = getSubtaskRunKey(tc.id, st.id);
+          const run = subtaskRuns?.get(runKey);
           let status: SubtaskStatus;
 
           if (run) {
@@ -79,14 +81,14 @@ export function useSubagentTasks(
             status = "pending";
           }
 
-          allTasks.push({ ...st, status, run });
+          allTasks.push({ ...st, toolCallId: tc.id, runKey, status, run });
         }
       }
     }
 
     const statusMap = new Map<string, SubtaskStatus>();
     for (const t of allTasks) {
-      statusMap.set(t.id, t.status);
+      statusMap.set(t.runKey, t.status);
     }
 
     return {

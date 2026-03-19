@@ -48,6 +48,9 @@
   }
   body {
     --chat-shell: color-mix(in srgb, var(--sidebar-bg) 76%, var(--app-bg));
+    --chat-surface:
+      linear-gradient(180deg, color-mix(in srgb, var(--sidebar-panel) 44%, transparent), transparent 20%),
+      linear-gradient(0deg, color-mix(in srgb, var(--sidebar-bg) 82%, transparent), transparent 22%);
     --chat-composer: color-mix(in srgb, var(--sidebar-panel-strong) 58%, var(--sidebar-bg));
     --chat-composer-border: color-mix(in srgb, var(--sidebar-border) 90%, transparent);
     --chat-assistant-rail: color-mix(in srgb, var(--accent) 24%, var(--sidebar-soft));
@@ -152,15 +155,12 @@
 }
 
 .chat-topbar {
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--sidebar-panel-strong) 72%, transparent), transparent);
+  background: var(--chat-surface);
   backdrop-filter: blur(14px);
 }
 
 .chat-scroll-region {
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--sidebar-panel) 44%, transparent), transparent 20%),
-    linear-gradient(0deg, color-mix(in srgb, var(--sidebar-bg) 82%, transparent), transparent 22%);
+  background: var(--chat-surface);
 }
 
 .chat-empty-state {
@@ -171,8 +171,7 @@
 }
 
 .chat-composer-dock {
-  background:
-    linear-gradient(180deg, transparent, color-mix(in srgb, var(--sidebar-panel) 34%, transparent) 18%, color-mix(in srgb, var(--sidebar-bg) 88%, var(--app-bg)));
+  background: var(--chat-surface);
 }
 
 .chat-composer-frame {

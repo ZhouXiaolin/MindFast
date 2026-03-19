@@ -1,6 +1,6 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { Loader2, CheckCircle2, XCircle, GitBranch } from "lucide-react";
-import type { SubtasksToolParams, Subtask, SubtaskStatus } from "../../../ai/subagent-types";
+import { getSubtaskRunKey, type SubtasksToolParams, type Subtask, type SubtaskStatus } from "../../../ai/subagent-types";
 import { cn } from "../../../utils/cn";
 import type { ToolRenderResult } from "./types";
 import { useSubagentToolContext } from "./SubagentToolContext";
@@ -18,13 +18,14 @@ function StatusIcon({ status }: { status: SubtaskStatus }) {
   }
 }
 
-function SubtaskLabel({ subtask }: { subtask: Subtask }) {
+function SubtaskLabel({ subtask, toolCallId }: { subtask: Subtask; toolCallId: string }) {
   const { statusMap, onSelectSubagent } = useSubagentToolContext();
-  const status = statusMap.get(subtask.id) ?? "pending";
+  const runKey = getSubtaskRunKey(toolCallId, subtask.id);
+  const status = statusMap.get(runKey) ?? "pending";
   return (
     <button
       type="button"
-      onClick={() => onSelectSubagent?.(subtask.id)}
+      onClick={() => onSelectSubagent?.(runKey)}
       className={cn(
         "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
         "border border-sidebar-soft bg-sidebar-panel hover:bg-sidebar-panel-strong",
@@ -45,9 +46,11 @@ export function renderSubagentTool(
   params: SubtasksToolParams | undefined,
   result: ToolResultMessage | undefined,
   _isStreaming?: boolean,
+  toolCallId?: string,
 ): ToolRenderResult {
   const subtasks = params?.subtasks;
   const isDone = !!result;
+  const effectiveToolCallId = toolCallId ?? "";
 
   // Creating state: params still streaming in, no subtasks yet
   if (!subtasks || subtasks.length === 0) {
@@ -68,10 +71,10 @@ export function renderSubagentTool(
     return {
       content: (
         <div className="flex flex-col gap-2">
-          <SubtasksSummary subtasks={subtasks} />
+          <SubtasksSummary subtasks={subtasks} toolCallId={effectiveToolCallId} />
           <div className="flex flex-col gap-1.5">
             {subtasks.map((st) => (
-              <SubtaskLabel key={st.id} subtask={st} />
+              <SubtaskLabel key={st.id} subtask={st} toolCallId={effectiveToolCallId} />
             ))}
           </div>
         </div>
@@ -84,10 +87,10 @@ export function renderSubagentTool(
   return {
     content: (
       <div className="flex flex-col gap-2">
-        <SubtasksSummary subtasks={subtasks} />
+        <SubtasksSummary subtasks={subtasks} toolCallId={effectiveToolCallId} />
         <div className="flex flex-col gap-1.5">
           {subtasks.map((st) => (
-            <SubtaskLabel key={st.id} subtask={st} />
+            <SubtaskLabel key={st.id} subtask={st} toolCallId={effectiveToolCallId} />
           ))}
         </div>
       </div>
@@ -96,9 +99,9 @@ export function renderSubagentTool(
   };
 }
 
-function SubtasksSummary({ subtasks }: { subtasks: Subtask[] }) {
+function SubtasksSummary({ subtasks, toolCallId }: { subtasks: Subtask[]; toolCallId: string }) {
   const { statusMap } = useSubagentToolContext();
-  const allStatuses = subtasks.map((st) => statusMap.get(st.id) ?? "pending");
+  const allStatuses = subtasks.map((st) => statusMap.get(getSubtaskRunKey(toolCallId, st.id)) ?? "pending");
   const runningCount = allStatuses.filter((s) => s === "running").length;
   const completedCount = allStatuses.filter((s) => s === "completed").length;
   const failedCount = allStatuses.filter((s) => s === "failed").length;
