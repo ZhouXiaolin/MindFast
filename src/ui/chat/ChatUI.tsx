@@ -19,10 +19,10 @@ import { ChatSubagentsPanel } from "./ChatSubagentsPanel";
 import { SubagentToolProvider } from "./tools";
 import { useSubtaskRuns } from "./useSubtaskRuns";
 import {
-  LivePreviewProvider,
-  useLivePreviewEntries,
-  type LivePreviewEntry,
-} from "./LivePreviewContext";
+  ArtifactPreviewProvider,
+  useArtifactPreviewEntries,
+  type ArtifactPreviewEntry,
+} from "../artifacts/ArtifactPreviewContext";
 import { isArtifactPath, normalizeWorkspacePath } from "../../ai/workspace-types";
 import type { WorkspaceFile, WorkspaceFileMessage } from "../../ai/workspace/types";
 import {
@@ -60,11 +60,11 @@ function addArtifactPanelItem(
 
 function buildArtifactPanelItems({
   committedArtifacts,
-  livePreviewEntries,
+  artifactPreviewEntries,
   subtaskTasks,
 }: {
   committedArtifacts: WorkspaceFile[];
-  livePreviewEntries: Map<string, LivePreviewEntry>;
+  artifactPreviewEntries: Map<string, ArtifactPreviewEntry>;
   subtaskTasks: SubtaskWithResult[];
 }): ArtifactPanelItem[] {
   const itemsByPath = new Map<string, ArtifactPanelItem>();
@@ -78,7 +78,11 @@ function buildArtifactPanelItems({
     );
   }
 
-  for (const entry of livePreviewEntries.values()) {
+  for (const entry of artifactPreviewEntries.values()) {
+    if (entry.phase === "committed" || !entry.toolCallId) {
+      continue;
+    }
+
     const normalizedPath = normalizeWorkspacePath(entry.path);
     addArtifactPanelItem(
       itemsByPath,
@@ -142,7 +146,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
   });
   const { usageText } = useChatUsage(messages);
   const pendingToolCalls = agent?.state.pendingToolCalls ?? new Set<string>();
-  const livePreviewEntries = useLivePreviewEntries(
+  const artifactPreviewEntries = useArtifactPreviewEntries(
     messages,
     streamMessage,
     pendingToolCalls,
@@ -241,18 +245,18 @@ export function ChatUI({ sessionId }: ChatUIProps) {
   const allArtifactItems = useMemo<ArtifactPanelItem[]>(() => {
     return buildArtifactPanelItems({
       committedArtifacts: workspaceFiles,
-      livePreviewEntries,
+      artifactPreviewEntries,
       subtaskTasks: subagentTasks,
     });
-  }, [livePreviewEntries, subagentTasks, workspaceFiles]);
+  }, [artifactPreviewEntries, subagentTasks, workspaceFiles]);
 
   const artifactItems = useMemo<ArtifactPanelItem[]>(() => {
     return buildArtifactPanelItems({
       committedArtifacts: currentTurnArtifacts,
-      livePreviewEntries,
+      artifactPreviewEntries,
       subtaskTasks: currentTurnSubagentTasks,
     });
-  }, [currentTurnArtifacts, currentTurnSubagentTasks, livePreviewEntries]);
+  }, [artifactPreviewEntries, currentTurnArtifacts, currentTurnSubagentTasks]);
 
   const {
     hasArtifacts,
@@ -375,7 +379,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
   const isEmptyChat = messages.length === 0 && !streamMessage;
 
   return (
-    <LivePreviewProvider entries={livePreviewEntries}>
+    <ArtifactPreviewProvider entries={artifactPreviewEntries}>
       <div className="relative flex h-full flex-1 min-w-0">
       {/* Chat column */}
       <div
@@ -526,6 +530,6 @@ export function ChatUI({ sessionId }: ChatUIProps) {
         />
       ) : null}
       </div>
-    </LivePreviewProvider>
+    </ArtifactPreviewProvider>
   );
 }

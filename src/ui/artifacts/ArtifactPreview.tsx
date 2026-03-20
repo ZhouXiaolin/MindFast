@@ -11,7 +11,7 @@ import { JavaScriptArtifact } from "./JavaScriptArtifact";
 import { PythonArtifact } from "./PythonArtifact";
 import { TextArtifact } from "./TextArtifact";
 import { GenericArtifact } from "./GenericArtifact";
-import { useResolvedPreviewContent } from "../chat/LivePreviewContext";
+import { useResolvedArtifactContent } from "./ArtifactPreviewContext";
 
 const RENDERERS: Record<string, React.ComponentType<ArtifactRendererProps>> = {
   html: HtmlArtifact,
@@ -28,9 +28,10 @@ const RENDERERS: Record<string, React.ComponentType<ArtifactRendererProps>> = {
 };
 
 export function ArtifactPreview({ filename, content }: ArtifactRendererProps) {
-  const resolved = useResolvedPreviewContent(filename, content);
+  const resolved = useResolvedArtifactContent(filename, content);
   const fileType = getFileType(filename);
   const Renderer = RENDERERS[fileType] || GenericArtifact;
+  const rendererKey = resolved.refreshToken ?? filename;
 
   if (!resolved.content && resolved.statusText) {
     return (
@@ -47,7 +48,7 @@ export function ArtifactPreview({ filename, content }: ArtifactRendererProps) {
           {resolved.statusText}
         </div>
       ) : null}
-      <Renderer filename={filename} content={resolved.content} />
+      <Renderer key={rendererKey} filename={filename} content={resolved.content} />
     </div>
   );
 }

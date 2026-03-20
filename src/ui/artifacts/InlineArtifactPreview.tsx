@@ -1,10 +1,10 @@
 import { useState } from "react";
+import { useResolvedArtifactContent } from "./ArtifactPreviewContext";
 import type { ArtifactRendererProps } from "./types";
 import { getFileType } from "./types";
 import { SandboxedIframe } from "./SandboxedIframe";
 import { CodeBlock } from "../chat/CodeBlock";
 import { MarkdownContent } from "../chat/MarkdownContent";
-import { useResolvedPreviewContent } from "../chat/LivePreviewContext";
 
 const INLINE_PREVIEW_MAX_HEIGHT = "min(420px, 50vh)";
 /** When true, container can grow with content (e.g. widget streaming) up to 80vh */
@@ -44,7 +44,7 @@ export interface InlineArtifactPreviewProps extends ArtifactRendererProps {
  * Renders preview (or code) in a bounded box so the artifact is visible without opening the side panel.
  */
 export function InlineArtifactPreview({ filename, content, growWithContent = false }: InlineArtifactPreviewProps) {
-  const resolved = useResolvedPreviewContent(filename, content);
+  const resolved = useResolvedArtifactContent(filename, content);
   const fileType = getFileType(filename);
   const resolvedContent = resolved.content;
   const boxClass = "overflow-hidden rounded-xl border border-sidebar-soft bg-sidebar-panel";
@@ -68,6 +68,7 @@ export function InlineArtifactPreview({ filename, content, growWithContent = fal
     return (
       <div className={boxClass} style={containerStyle}>
         <SandboxedIframe
+          key={resolved.refreshToken ?? filename}
           htmlContent={resolvedContent}
           className="w-full h-full border-0 bg-white rounded-b-xl"
           continuousHeightUpdates={growWithContent}

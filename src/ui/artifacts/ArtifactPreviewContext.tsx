@@ -7,37 +7,39 @@ import {
   isWidgetPath,
   normalizeWorkspacePath,
 } from "../../ai/workspace-types";
-import { getFileType, type ArtifactFileType } from "../artifacts/types";
+import { getFileType, type ArtifactFileType } from "./types";
 
-type LivePreviewOperation = "write" | "edit";
-type LivePreviewSource = "pending" | "stream";
+type ArtifactPreviewOperation = "write" | "edit";
+type ArtifactPreviewPhase = "committed" | "pending" | "stream";
 
-export interface LivePreviewEntry {
+export interface ArtifactPreviewEntry {
   canRenderContent: boolean;
   content?: string;
   fileType: ArtifactFileType;
-  operation: LivePreviewOperation;
+  operation: ArtifactPreviewOperation;
   path: string;
-  source: LivePreviewSource;
-  statusText: string;
-  toolCallId: string;
+  phase: ArtifactPreviewPhase;
+  refreshToken?: string;
+  statusText: string | null;
+  toolCallId?: string;
 }
 
-interface LivePreviewContextValue {
-  entries: Map<string, LivePreviewEntry>;
+interface ArtifactPreviewContextValue {
+  entries: Map<string, ArtifactPreviewEntry>;
 }
 
-interface ResolvedPreviewContent {
+interface ResolvedArtifactContent {
   content: string;
+  entry: ArtifactPreviewEntry | null;
   fileType: ArtifactFileType;
   isLive: boolean;
-  liveEntry: LivePreviewEntry | null;
+  refreshToken: string | null;
   statusText: string | null;
 }
 
-const LivePreviewContext = createContext<LivePreviewContextValue | null>(null);
+const ArtifactPreviewContext = createContext<ArtifactPreviewContextValue | null>(null);
 
-const DEFAULT_CONTEXT_VALUE: LivePreviewContextValue = {
+const DEFAULT_CONTEXT_VALUE: ArtifactPreviewContextValue = {
   entries: new Map(),
 };
 
@@ -51,7 +53,7 @@ const TEXT_STREAMABLE_FILE_TYPES = new Set<ArtifactFileType>([
   "text",
 ]);
 
-function isLivePreviewPath(path?: string): path is string {
+function isPreviewPath(path?: string): path is string {
   return !!path && (isArtifactPath(path) || isWidgetPath(path));
 }
 
@@ -60,7 +62,7 @@ function isTextStreamableFileType(fileType: ArtifactFileType): boolean {
 }
 
 function getStatusText(
-  operation: LivePreviewOperation,
+  operation: ArtifactPreviewOperation,
   path: string,
   fileType: ArtifactFileType
 ): string {
@@ -106,33 +108,12 @@ function getToolCallArgs(toolCall: ToolCall): {
   };
 }
 
-function findUniqueMatchRange(
-  content: string,
-  oldText: string
-): { end: number; start: number } | null {
-  if (!oldText) {
-    return null;
-  }
-
-  const firstIndex = content.indexOf(oldText);
-  if (firstIndex < 0) {
-    return null;
-  }
-
-  const secondIndex = content.indexOf(oldText, firstIndex + oldText.length);
-  if (secondIndex >= 0) {
-    return null;
-  }
-
-  return {
-    start: firstIndex,
-    end: firstIndex + oldText.length,
-  };
-}
-
-function buildWriteEntry(toolCall: ToolCall, source: LivePreviewSource): LivePreviewEntry | null {
+function buildStreamingWriteEntry(
+  toolCall: ToolCall,
+  phase: Extract<ArtifactPreviewPhase, "pending" | "stream">
+): ArtifactPreviewEntry | null {
   const path = getToolCallPath(toolCall);
-  if (!isLivePreviewPath(path)) {
+  if (!isPreviewPath(path)) {
     return null;
   }
 
@@ -146,87 +127,65 @@ function buildWriteEntry(toolCall: ToolCall, source: LivePreviewSource): LivePre
     fileType,
     operation: "write",
     path,
-    source,
+    phase,
     statusText: getStatusText("write", path, fileType),
     toolCallId: toolCall.id,
   };
 }
 
-function buildEditEntry(
+function buildPendingEditEntry(
   toolCall: ToolCall,
   committedByPath: Map<string, WorkspaceFile>,
-  source: LivePreviewSource
-): LivePreviewEntry | null {
+  entries: Map<string, ArtifactPreviewEntry>,
+  phase: Extract<ArtifactPreviewPhase, "pending" | "stream">
+): ArtifactPreviewEntry | null {
   const path = getToolCallPath(toolCall);
-  if (!isLivePreviewPath(path)) {
+  if (!isPreviewPath(path)) {
     return null;
   }
 
   const fileType = getFileType(path);
-  const statusText = getStatusText("edit", path, fileType);
-  if (!isTextStreamableFileType(fileType)) {
-    return {
-      canRenderContent: false,
-      fileType,
-      operation: "edit",
-      path,
-      source,
-      statusText,
-      toolCallId: toolCall.id,
-    };
-  }
-
-  const baseContent = committedByPath.get(path)?.content;
-  if (baseContent === undefined) {
-    return {
-      canRenderContent: false,
-      fileType,
-      operation: "edit",
-      path,
-      source,
-      statusText,
-      toolCallId: toolCall.id,
-    };
-  }
-
-  const { old_str: oldText, new_str: newText } = getToolCallArgs(toolCall);
-  const matchRange = findUniqueMatchRange(baseContent, oldText ?? "");
-  if (!matchRange) {
-    return {
-      canRenderContent: false,
-      fileType,
-      operation: "edit",
-      path,
-      source,
-      statusText,
-      toolCallId: toolCall.id,
-    };
-  }
+  const currentEntry = entries.get(path);
+  const currentContent = currentEntry?.content ?? committedByPath.get(path)?.content;
+  const canRenderContent = isTextStreamableFileType(fileType) && currentContent !== undefined;
 
   return {
-    canRenderContent: true,
-    content: `${baseContent.slice(0, matchRange.start)}${newText ?? ""}${baseContent.slice(matchRange.end)}`,
+    canRenderContent,
+    content: canRenderContent ? currentContent : undefined,
     fileType,
     operation: "edit",
     path,
-    source,
-    statusText,
+    phase,
+    refreshToken: currentEntry?.refreshToken,
+    statusText: getStatusText("edit", path, fileType),
     toolCallId: toolCall.id,
   };
 }
 
-function buildLivePreviewEntry(
+function buildCommittedEditEntry(
   toolCall: ToolCall,
-  committedByPath: Map<string, WorkspaceFile>,
-  source: LivePreviewSource
-): LivePreviewEntry | null {
-  if (toolCall.name === "write") {
-    return buildWriteEntry(toolCall, source);
+  committedByPath: Map<string, WorkspaceFile>
+): ArtifactPreviewEntry | null {
+  const path = getToolCallPath(toolCall);
+  if (!isPreviewPath(path)) {
+    return null;
   }
-  if (toolCall.name === "edit") {
-    return buildEditEntry(toolCall, committedByPath, source);
-  }
-  return null;
+
+  const fileType = getFileType(path);
+  const content = committedByPath.get(path)?.content;
+  const canRenderContent = isTextStreamableFileType(fileType) && content !== undefined;
+
+  return {
+    canRenderContent,
+    content: canRenderContent ? content : undefined,
+    fileType,
+    operation: "edit",
+    path,
+    phase: "committed",
+    refreshToken: toolCall.id,
+    statusText: null,
+    toolCallId: toolCall.id,
+  };
 }
 
 function collectAssistantToolCalls(
@@ -240,18 +199,31 @@ function collectAssistantToolCalls(
     .filter((chunk): chunk is ToolCall => chunk.type === "toolCall");
 }
 
-export function useLivePreviewEntries(
+function buildToolCallsById(messages: AgentMessage[]): Map<string, ToolCall> {
+  const toolCallsById = new Map<string, ToolCall>();
+
+  for (const message of messages) {
+    for (const toolCall of collectAssistantToolCalls(message)) {
+      toolCallsById.set(toolCall.id, toolCall);
+    }
+  }
+
+  return toolCallsById;
+}
+
+export function useArtifactPreviewEntries(
   messages: AgentMessage[],
   streamMessage: AgentMessage | null,
   pendingToolCalls: Set<string>,
   workspaceFiles: WorkspaceFile[]
-): Map<string, LivePreviewEntry> {
+): Map<string, ArtifactPreviewEntry> {
   return useMemo(() => {
     const committedByPath = new Map<string, WorkspaceFile>();
     for (const file of workspaceFiles) {
       committedByPath.set(normalizeWorkspacePath(file.filename), file);
     }
 
+    const toolCallsById = buildToolCallsById(messages);
     const toolResultsById = new Map<string, ToolResultMessage>();
     for (const message of messages) {
       if (message.role !== "toolResult") {
@@ -262,14 +234,40 @@ export function useLivePreviewEntries(
       toolResultsById.set(toolResult.toolCallId, toolResult);
     }
 
-    const entries = new Map<string, LivePreviewEntry>();
+    const entries = new Map<string, ArtifactPreviewEntry>();
+
+    for (const message of messages) {
+      if (message.role !== "toolResult") {
+        continue;
+      }
+
+      const toolResult = message as ToolResultMessage & { toolCallId: string };
+      if (toolResult.isError || toolResult.toolName !== "edit") {
+        continue;
+      }
+
+      const toolCall = toolCallsById.get(toolResult.toolCallId);
+      if (!toolCall) {
+        continue;
+      }
+
+      const entry = buildCommittedEditEntry(toolCall, committedByPath);
+      if (entry) {
+        entries.set(entry.path, entry);
+      }
+    }
+
     for (const message of messages) {
       for (const toolCall of collectAssistantToolCalls(message)) {
         if (!pendingToolCalls.has(toolCall.id) || toolResultsById.has(toolCall.id)) {
           continue;
         }
 
-        const entry = buildLivePreviewEntry(toolCall, committedByPath, "pending");
+        const entry = toolCall.name === "write"
+          ? buildStreamingWriteEntry(toolCall, "pending")
+          : toolCall.name === "edit"
+            ? buildPendingEditEntry(toolCall, committedByPath, entries, "pending")
+            : null;
         if (entry) {
           entries.set(entry.path, entry);
         }
@@ -277,7 +275,11 @@ export function useLivePreviewEntries(
     }
 
     for (const toolCall of collectAssistantToolCalls(streamMessage)) {
-      const entry = buildLivePreviewEntry(toolCall, committedByPath, "stream");
+      const entry = toolCall.name === "write"
+        ? buildStreamingWriteEntry(toolCall, "stream")
+        : toolCall.name === "edit"
+          ? buildPendingEditEntry(toolCall, committedByPath, entries, "stream")
+          : null;
       if (entry) {
         entries.set(entry.path, entry);
       }
@@ -287,44 +289,46 @@ export function useLivePreviewEntries(
   }, [messages, pendingToolCalls, streamMessage, workspaceFiles]);
 }
 
-export function LivePreviewProvider({
-  children,
+export function ArtifactPreviewProvider({
   entries,
+  children,
 }: {
+  entries: Map<string, ArtifactPreviewEntry>;
   children: React.ReactNode;
-  entries: Map<string, LivePreviewEntry>;
 }) {
   const value = useMemo(() => ({ entries }), [entries]);
   return (
-    <LivePreviewContext.Provider value={value}>
+    <ArtifactPreviewContext.Provider value={value}>
       {children}
-    </LivePreviewContext.Provider>
+    </ArtifactPreviewContext.Provider>
   );
 }
 
-export function useResolvedPreviewContent(
+export function useResolvedArtifactContent(
   filename: string,
   fallbackContent: string
-): ResolvedPreviewContent {
-  const context = useContext(LivePreviewContext) ?? DEFAULT_CONTEXT_VALUE;
+): ResolvedArtifactContent {
+  const context = useContext(ArtifactPreviewContext) ?? DEFAULT_CONTEXT_VALUE;
   const normalizedPath = normalizeWorkspacePath(filename);
-  const liveEntry = context.entries.get(normalizedPath) ?? null;
+  const entry = context.entries.get(normalizedPath) ?? null;
 
-  if (!liveEntry) {
+  if (!entry) {
     return {
       content: fallbackContent,
+      entry: null,
       fileType: getFileType(filename),
       isLive: false,
-      liveEntry: null,
+      refreshToken: null,
       statusText: null,
     };
   }
 
   return {
-    content: liveEntry.canRenderContent ? liveEntry.content ?? "" : fallbackContent,
-    fileType: liveEntry.fileType,
-    isLive: true,
-    liveEntry,
-    statusText: liveEntry.statusText,
+    content: entry.canRenderContent ? entry.content ?? fallbackContent : fallbackContent,
+    entry,
+    fileType: entry.fileType,
+    isLive: entry.phase !== "committed",
+    refreshToken: entry.refreshToken ?? null,
+    statusText: entry.statusText,
   };
 }
