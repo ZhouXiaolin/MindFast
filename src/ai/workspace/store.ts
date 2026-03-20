@@ -10,6 +10,7 @@ import {
 } from "../workspace-types";
 import { computeEdit } from "./file-tool-utils";
 import type { WorkspaceFile, WorkspaceFileMessage, WorkspaceParams } from "./types";
+import type { SeedWorkspaceFile } from "../guidelines";
 
 function createWorkspaceFileId(seed?: string): string {
   if (seed) {
@@ -123,6 +124,7 @@ function getNormalizedWorkspacePath(path: string, action: string, allowRoot = fa
 export class WorkspaceStore {
   private _files = new Map<string, WorkspaceFile>();
   private _directories = new Set<string>();
+  private _seedFiles = new Map<string, string>();
   onChange: (() => void) | null = null;
 
   constructor() {
@@ -165,6 +167,34 @@ export class WorkspaceStore {
     const parentPath = getParentPath(path);
     if (!parentPath) return;
     this.ensureDirectory(parentPath);
+  }
+
+  private applySeedFilesTo(target: Map<string, WorkspaceFile>): void {
+    for (const [path, content] of this._seedFiles.entries()) {
+      this.ensureParentDirectories(path);
+      target.set(path, {
+        id: createWorkspaceFileId(`seed:${path}`),
+        filename: path,
+        content,
+        createdAt: new Date(0),
+        updatedAt: new Date(0),
+      });
+    }
+  }
+
+  setSeedFiles(files: SeedWorkspaceFile[]): void {
+    const nextSeedFiles = new Map<string, string>();
+
+    for (const file of files) {
+      const normalizedPath = getNormalizedWorkspacePath(file.path, "seed");
+      nextSeedFiles.set(normalizedPath, file.content);
+    }
+
+    this._seedFiles = nextSeedFiles;
+    this.resetDirectories();
+    this._files = new Map();
+    this.applySeedFilesTo(this._files);
+    this.emit();
   }
 
   hasPath(path: string): boolean {
@@ -398,6 +428,8 @@ export class WorkspaceStore {
         updatedAt: new Date(),
       });
     };
+
+    this.applySeedFilesTo(finalFiles);
 
     for (const message of messages) {
       const role = (message as { role?: string }).role;

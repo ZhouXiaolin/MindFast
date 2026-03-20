@@ -10,6 +10,7 @@ import {
   hydrateAppSettings,
   subscribeAppSettingsPersistence,
 } from "./stores/app-settings";
+import { GUIDELINE_SEED_FILES } from "./ai/guidelines";
 
 let storage: ExtendedAppStorage | null = null;
 let agent: Agent | null = null;
@@ -43,6 +44,7 @@ export async function initApp(): Promise<{
 
     // Initialize workspace store
     const store = new WorkspaceStore();
+    store.setSeedFiles(GUIDELINE_SEED_FILES);
     workspaceStore = store;
 
     // Initialize agent

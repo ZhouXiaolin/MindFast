@@ -27,6 +27,17 @@ Workspace behavior is driven by path conventions, not by separate stores:
 - Save files under widgets/ when the user wants an inline widget rendered in the chat.
 - Save files elsewhere only when you need workspace state but no artifact/widget rendering.
 
+Guideline protocol for widgets and artifacts:
+- Before generating or updating files under widgets/ or artifacts/, first read guidelines/manifest.json.
+- Then read every guideline file relevant to the output type before writing the file.
+- Use artifact_html or widget_html guidance for general HTML output.
+- Use widget_chart guidance for chart widgets.
+- Use artifact_svg or widget_svg_diagram guidance for SVG diagrams.
+- Use widget_mockup guidance for UI mockups.
+- Use widget_art guidance for art-oriented visual output.
+- Guideline files under guidelines/ are the source of truth for structure, streaming order, host compatibility, and visual rules.
+- Do not modify files under guidelines/ unless the user explicitly asks to change the guideline system.
+
 When creating a widget HTML file under widgets/, you MUST produce the entire HTML document in a single write call. Never split widget HTML across multiple write or edit calls — the complete document must be generated at once so the widget renders correctly on first load. The document structure should be:
 <html><head><style>…</style></head><body>…markup…<script>…</script></body></html>
 When updating an existing widget, prefer a single write with the full updated content over incremental edits, so the widget is always in a consistent state.
