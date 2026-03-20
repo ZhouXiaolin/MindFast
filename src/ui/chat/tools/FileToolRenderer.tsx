@@ -21,6 +21,15 @@ function getLanguageFromPath(path?: string): string {
   return map[ext ?? ""] ?? "text";
 }
 
+interface ToolHeaderProps {
+  state: "inprogress" | "complete" | "error";
+  label: string;
+  path?: string;
+  children?: React.ReactNode;
+  onOpenArtifact?: (filename: string) => void;
+  forceArtifactLink?: boolean;
+}
+
 function ToolHeader({
   state,
   label,
@@ -28,14 +37,7 @@ function ToolHeader({
   children,
   onOpenArtifact,
   forceArtifactLink = false,
-}: {
-  state: "inprogress" | "complete" | "error";
-  label: string;
-  path?: string;
-  children?: React.ReactNode;
-  onOpenArtifact?: (filename: string) => void;
-  forceArtifactLink?: boolean;
-}) {
+}: ToolHeaderProps) {
   const [open, setOpen] = useState(state !== "inprogress");
   const hasContent = !!children;
   const shouldOpenArtifact = forceArtifactLink && !!path && isArtifactPath(path) && !!onOpenArtifact;
@@ -132,7 +134,12 @@ export function renderFileTool(
   if (!result) {
     return {
       content: (
-        <ToolHeader state={state} label={labels.streaming} path={path} onOpenArtifact={onOpenArtifact}>
+        <ToolHeader
+          state={state}
+          label={labels.streaming}
+          path={path}
+          onOpenArtifact={onOpenArtifact}
+        >
           {isWidgetPath(path ?? "") && previewContent !== undefined ? (
             <div className="overflow-hidden rounded-2xl border border-sidebar-soft bg-sidebar-panel">
               <div className="p-2">

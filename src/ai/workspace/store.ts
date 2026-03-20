@@ -176,15 +176,6 @@ export class WorkspaceStore {
   }
 
   editFile(path: string, oldText: string, newText: string): EditFileResult | string {
-    return this.editFileWithOptions(path, oldText, newText);
-  }
-
-  editFileWithOptions(
-    path: string,
-    oldText: string,
-    newText: string,
-    options: { append?: boolean } = {}
-  ): EditFileResult | string {
     const normalizedPath = normalizeWorkspacePath(path);
     if (!normalizedPath) {
       return "Error: edit requires a non-empty path";
@@ -195,16 +186,8 @@ export class WorkspaceStore {
       return createNotFoundMessage(normalizedPath, this.listAllPaths());
     }
 
-    if (options.append) {
-      const file = this.upsertFile(normalizedPath, `${existing.content}${newText}`, existing.id);
-      return {
-        file,
-        message: `Appended to file ${normalizedPath}`,
-      };
-    }
-
     if (!oldText) {
-      return "Error: edit requires old_str unless append is true";
+      return "Error: edit requires old_str";
     }
     if (!existing.content.includes(oldText)) {
       return `Error: String not found in file. Here is the full content:\n\n${existing.content}`;
@@ -346,7 +329,7 @@ export class WorkspaceStore {
         if (params.old_str === undefined || params.new_str === undefined) {
           return "Error: update command requires old_str and new_str";
         }
-        const result = this.editFileWithOptions(params.filename, params.old_str, params.new_str);
+        const result = this.editFile(params.filename, params.old_str, params.new_str);
         return typeof result === "string" ? result : result.message;
       }
       case "get":
@@ -442,7 +425,7 @@ export class WorkspaceStore {
 
         if (toolResult.toolName === "edit") {
           const args = (toolCall as ToolCall & {
-            arguments: { path?: string; old_str?: string; new_str?: string; append?: boolean };
+            arguments: { path?: string; old_str?: string; new_str?: string };
           }).arguments;
           const finalPath = (toolResult as { details?: { path?: string } }).details?.path ?? args.path;
           if (!finalPath || args.new_str === undefined) {
@@ -452,15 +435,6 @@ export class WorkspaceStore {
           const normalizedPath = normalizeWorkspacePath(finalPath);
           const existing = finalFiles.get(normalizedPath);
           if (!existing) continue;
-
-          if (args.append === true) {
-            upsert(
-              normalizedPath,
-              `${existing.content}${args.new_str}`,
-              existing.id
-            );
-            continue;
-          }
 
           if (args.old_str === undefined) {
             continue;

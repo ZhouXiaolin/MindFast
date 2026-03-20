@@ -5,7 +5,6 @@ import { extractSubtasksFromToolCall, SUBAGENT_TOOL_NAME } from "../../ai/subage
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolMessage } from "./ToolMessage";
 import { MarkdownContent } from "./MarkdownContent";
-import { isSilentAppendEditToolCall } from "./silentAppend";
 
 interface AssistantMessageProps {
   message: AssistantMessageType;
@@ -54,9 +53,6 @@ export function AssistantMessage({
       );
     } else if (chunk.type === "toolCall") {
       const tc = chunk as { id: string; name: string; arguments?: unknown };
-      if (isSilentAppendEditToolCall(tc.name, tc.arguments)) {
-        continue;
-      }
       const pending = pendingToolCalls?.has(tc.id) ?? false;
       const result = toolResultsById?.get(tc.id);
       const isSubagentCall = !!extractSubtasksFromToolCall(tc.name, tc.arguments);

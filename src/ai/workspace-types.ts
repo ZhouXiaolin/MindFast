@@ -16,9 +16,8 @@ export interface WriteToolParams {
 
 export interface EditToolParams {
   path: string;
-  old_str?: string;
+  old_str: string;
   new_str: string;
-  append?: boolean;
 }
 
 export interface BashToolParams {
@@ -30,7 +29,6 @@ export interface FileToolResultDetails {
   path: string;
   content: string;
   action: "create" | "update";
-  append?: boolean;
 }
 
 export interface BashSubagentPayload {

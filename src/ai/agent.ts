@@ -19,7 +19,7 @@ Use read to inspect an existing workspace file.
 Use write to create a new workspace file or overwrite an existing one with full content.
 Write may return a final filename with a short unique suffix added before the extension. Always use the returned filename for later read or edit calls.
 Use edit for targeted text replacement inside an existing file. Prefer edit over write when changing only part of a file.
-Use edit with append=true when you need to silently append content to the end of an existing file. In append mode, provide new_str as the content to append and do not rely on old_str.
+Edit requires both old_str and new_str. Use write when you need to create a new file or replace the full contents of an existing file.
 
 Workspace behavior is driven by path conventions, not by separate stores:
 - Save files under artifacts/ when the user wants a persistent artifact shown in the artifacts panel.

@@ -16,16 +16,15 @@ const writeParamsSchema = Type.Object({
 
 const editParamsSchema = Type.Object({
   path: Type.String({ description: "Workspace path to edit" }),
-  old_str: Type.Optional(Type.String({ description: "Exact text to replace. Required unless append is true." })),
+  old_str: Type.String({ description: "Exact text to replace" }),
   new_str: Type.String({ description: "Replacement text" }),
-  append: Type.Optional(Type.Boolean({ description: "When true, append new_str to the end of the file instead of replacing old_str." })),
 });
 
 type ReadToolArgs = Static<typeof readParamsSchema>;
 type WriteToolArgs = Static<typeof writeParamsSchema>;
 type EditToolArgs = Static<typeof editParamsSchema>;
 
-function appendWorkspaceFileMessage(
+function persistWorkspaceFileMessage(
   agent: Agent | null,
   action: WorkspaceFileMessage["action"],
   filename: string,
@@ -78,7 +77,7 @@ export function createWriteTool(
         };
       }
 
-      appendWorkspaceFileMessage(getAgent(), result.action, result.file.filename, result.file.content);
+      persistWorkspaceFileMessage(getAgent(), result.action, result.file.filename, result.file.content);
 
       return {
         content: [{ type: "text", text: result.message }],
@@ -99,13 +98,15 @@ export function createEditTool(
   return {
     label: "Edit",
     name: "edit",
-    description: "Edit a workspace file by replacing exact text, or append to the end when append is true.",
+    description: "Edit a workspace file by replacing exact text.",
     parameters: editParamsSchema,
     execute: async (_toolCallId: string, args: EditToolArgs) => {
-      const isAppend = args.append === true;
-      const result = store.editFileWithOptions(args.path, args.old_str ?? "", args.new_str, {
-        append: isAppend,
+      console.log("[EDIT TOOL]", {
+        path: args.path,
+        old_str: args.old_str,
+        new_str: args.new_str,
       });
+      const result = store.editFile(args.path, args.old_str, args.new_str);
       if (typeof result === "string") {
         return {
           content: [{ type: "text", text: result }],
@@ -113,11 +114,7 @@ export function createEditTool(
         };
       }
 
-      // Only persist non-append edits as workspace file messages.
-      // Append operations remain silent updates to existing files.
-      if (!isAppend) {
-        appendWorkspaceFileMessage(getAgent(), "update", result.file.filename, result.file.content);
-      }
+      persistWorkspaceFileMessage(getAgent(), "update", result.file.filename, result.file.content);
 
       return {
         content: [{ type: "text", text: result.message }],
@@ -125,7 +122,6 @@ export function createEditTool(
           path: result.file.filename,
           content: result.file.content,
           action: "update",
-          append: isAppend,
         },
       };
     },

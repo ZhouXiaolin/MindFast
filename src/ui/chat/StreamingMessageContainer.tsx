@@ -1,7 +1,6 @@
 import type { AgentMessage, AgentTool } from "@mariozechner/pi-agent-core";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { AssistantMessage } from "./AssistantMessage";
-import { sanitizeAssistantMessageForDisplay } from "./silentAppend";
 
 interface StreamingMessageContainerProps {
   message: AgentMessage | null;
@@ -36,14 +35,9 @@ export function StreamingMessageContainer({
   }
 
   if (message.role === "assistant") {
-    const displayMessage = sanitizeAssistantMessageForDisplay(message as any);
-    if (!displayMessage) {
-      return null;
-    }
-
     return (
       <AssistantMessage
-        message={displayMessage as any}
+        message={message as any}
         tools={tools}
         pendingToolCalls={pendingToolCalls}
         toolResultsById={toolResultsById}
