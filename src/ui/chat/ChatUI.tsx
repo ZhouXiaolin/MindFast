@@ -17,7 +17,9 @@ import { useSubagentPanel } from "./useSubagentPanel";
 import { ChatSubagentsPanel } from "./ChatSubagentsPanel";
 import { SubagentToolProvider } from "./tools";
 import { useSubtaskRuns } from "./useSubtaskRuns";
+import { LivePreviewProvider, useLivePreviewEntries } from "./LivePreviewContext";
 import { isArtifactPath } from "../../ai/workspace-types";
+import type { WorkspaceFile } from "../../ai/workspace/types";
 interface ChatUIProps {
   sessionId: string;
 }
@@ -62,6 +64,12 @@ export function ChatUI({ sessionId }: ChatUIProps) {
   });
   const { usageText } = useChatUsage(messages);
   const pendingToolCalls = agent?.state.pendingToolCalls ?? new Set<string>();
+  const livePreviewEntries = useLivePreviewEntries(
+    messages,
+    streamMessage,
+    pendingToolCalls,
+    workspaceFiles
+  );
   const subtaskRuns = useSubtaskRuns();
   const {
     tasks: subagentTasks,
@@ -87,6 +95,28 @@ export function ChatUI({ sessionId }: ChatUIProps) {
         label: artifact.filename,
       }));
 
+    const existingPaths = new Set(panelItems.map((item) => item.artifact.filename));
+    for (const entry of livePreviewEntries.values()) {
+      if (!isArtifactPath(entry.path) || existingPaths.has(entry.path)) {
+        continue;
+      }
+
+      const livePreviewFile: WorkspaceFile = {
+        id: `live:${entry.toolCallId}:${entry.path}`,
+        filename: entry.path,
+        content: entry.canRenderContent ? entry.content ?? "" : "",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      panelItems.push({
+        id: `live:${entry.toolCallId}:${entry.path}`,
+        artifact: livePreviewFile,
+        kind: "main",
+        label: entry.path,
+      });
+    }
+
     for (const task of subagentTasks) {
       for (const [index, artifact] of (task.run?.files ?? []).entries()) {
         if (!isArtifactPath(artifact.filename)) {
@@ -102,7 +132,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     }
 
     return panelItems;
-  }, [workspaceFiles, subagentTasks]);
+  }, [livePreviewEntries, workspaceFiles, subagentTasks]);
 
   const {
     hasArtifacts,
@@ -222,7 +252,8 @@ export function ChatUI({ sessionId }: ChatUIProps) {
   const isEmptyChat = messages.length === 0 && !streamMessage;
 
   return (
-    <div className="relative flex h-full flex-1 min-w-0">
+    <LivePreviewProvider entries={livePreviewEntries}>
+      <div className="relative flex h-full flex-1 min-w-0">
       {/* Chat column */}
       <div
         className={cn("chat-column-shell flex h-full min-w-0 flex-1 flex-col", CHAT_FONT_CLASS[chatFont])}
@@ -372,6 +403,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
           tools={tools}
         />
       ) : null}
-    </div>
+      </div>
+    </LivePreviewProvider>
   );
 }

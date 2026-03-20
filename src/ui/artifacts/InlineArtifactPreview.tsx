@@ -4,6 +4,7 @@ import { getFileType } from "./types";
 import { SandboxedIframe } from "./SandboxedIframe";
 import { CodeBlock } from "../chat/CodeBlock";
 import { MarkdownContent } from "../chat/MarkdownContent";
+import { useResolvedPreviewContent } from "../chat/LivePreviewContext";
 
 const INLINE_PREVIEW_MAX_HEIGHT = "min(420px, 50vh)";
 /** When true, container can grow with content (e.g. widget streaming) up to 80vh */
@@ -43,11 +44,24 @@ export interface InlineArtifactPreviewProps extends ArtifactRendererProps {
  * Renders preview (or code) in a bounded box so the artifact is visible without opening the side panel.
  */
 export function InlineArtifactPreview({ filename, content, growWithContent = false }: InlineArtifactPreviewProps) {
+  const resolved = useResolvedPreviewContent(filename, content);
   const fileType = getFileType(filename);
+  const resolvedContent = resolved.content;
   const boxClass = "overflow-hidden rounded-xl border border-sidebar-soft bg-sidebar-panel";
   const maxHeight = growWithContent ? GROW_MAX_HEIGHT : INLINE_PREVIEW_MAX_HEIGHT;
 
   const [iframeHeight, setIframeHeight] = useState(200);
+
+  if (!resolvedContent && resolved.statusText) {
+    return (
+      <div
+        className={`${boxClass} flex items-center justify-center p-4 text-sm text-sidebar-muted`}
+        style={{ maxHeight: growWithContent ? "none" : maxHeight, minHeight: growWithContent ? 120 : 120 }}
+      >
+        {resolved.statusText}
+      </div>
+    );
+  }
 
   if (fileType === "html") {
     const containerStyle = growWithContent
@@ -56,7 +70,7 @@ export function InlineArtifactPreview({ filename, content, growWithContent = fal
     return (
       <div className={boxClass} style={containerStyle}>
         <SandboxedIframe
-          htmlContent={content}
+          htmlContent={resolvedContent}
           className="w-full h-full border-0 bg-white rounded-b-xl"
           onHeightChange={growWithContent ? setIframeHeight : undefined}
         />
@@ -68,7 +82,7 @@ export function InlineArtifactPreview({ filename, content, growWithContent = fal
     return (
       <div className={`${boxClass} flex items-center justify-center p-3`} style={{ maxHeight }}>
         <img
-          src={getImageUrl(content, filename)}
+          src={getImageUrl(resolvedContent, filename)}
           alt={filename}
           className="max-w-full max-h-[360px] object-contain"
         />
@@ -81,7 +95,7 @@ export function InlineArtifactPreview({ filename, content, growWithContent = fal
       <div
         className={`${boxClass} flex items-center justify-center p-3 overflow-auto`}
         style={{ maxHeight }}
-        dangerouslySetInnerHTML={{ __html: content }}
+        dangerouslySetInnerHTML={{ __html: resolvedContent }}
       />
     );
   }
@@ -92,7 +106,7 @@ export function InlineArtifactPreview({ filename, content, growWithContent = fal
         className={`${boxClass} overflow-auto p-4 text-sm`}
         style={{ maxHeight: growWithContent ? "none" : maxHeight, minHeight: growWithContent ? 120 : undefined }}
       >
-        <MarkdownContent content={content} />
+        <MarkdownContent content={resolvedContent} />
       </div>
     );
   }
@@ -119,7 +133,7 @@ export function InlineArtifactPreview({ filename, content, growWithContent = fal
     >
       <div className="overflow-auto p-2">
         <CodeBlock
-          code={content}
+          code={resolvedContent}
           language={getLanguageFromFilename(filename)}
           className="rounded-lg border-0 text-sm"
         />

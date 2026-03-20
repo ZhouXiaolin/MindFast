@@ -1,7 +1,7 @@
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { FileCode2, ChevronDown, ChevronUp } from "lucide-react";
 import * as Collapsible from "@radix-ui/react-collapsible";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { EditToolArgs, WriteToolArgs } from "../../../ai/file-tools";
 import type { FileToolResultDetails } from "../../../ai/workspace-types";
 import { isArtifactPath, isWidgetPath } from "../../../ai/workspace-types";
@@ -38,9 +38,16 @@ function ToolHeader({
   onOpenArtifact,
   forceArtifactLink = false,
 }: ToolHeaderProps) {
-  const [open, setOpen] = useState(state !== "inprogress");
+  const isWidget = isWidgetPath(path ?? "");
+  const [open, setOpen] = useState(() => isWidget || state !== "inprogress");
   const hasContent = !!children;
   const shouldOpenArtifact = forceArtifactLink && !!path && isArtifactPath(path) && !!onOpenArtifact;
+
+  useEffect(() => {
+    if (isWidget) {
+      setOpen(true);
+    }
+  }, [isWidget, path, state]);
 
   const headerContent = (
     <div className="flex items-center gap-2 text-sm text-sidebar-muted">

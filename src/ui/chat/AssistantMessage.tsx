@@ -1,7 +1,8 @@
 import { Copy } from "lucide-react";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
-import type { AssistantMessage as AssistantMessageType, ToolResultMessage } from "@mariozechner/pi-ai";
+import type { AssistantMessage as AssistantMessageType, ToolCall, ToolResultMessage } from "@mariozechner/pi-ai";
 import { extractSubtasksFromToolCall, SUBAGENT_TOOL_NAME } from "../../ai/subagent-types";
+import { isArtifactPath, isWidgetPath } from "../../ai/workspace-types";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolMessage } from "./ToolMessage";
 import { MarkdownContent } from "./MarkdownContent";
@@ -24,6 +25,32 @@ function extractAssistantTextContent(content: AssistantMessageType["content"]): 
         : []
     ))
     .join("\n\n");
+}
+
+function getToolCallPath(toolCall: ToolCall): string | undefined {
+  const args = toolCall.arguments;
+  if (!args || typeof args !== "object") {
+    return undefined;
+  }
+
+  const path = (args as { path?: unknown }).path;
+  return typeof path === "string" ? path : undefined;
+}
+
+function shouldHideToolCall(
+  toolCall: ToolCall,
+  result?: ToolResultMessage
+): boolean {
+  if (toolCall.name !== "edit" || result?.isError) {
+    return false;
+  }
+
+  const path = getToolCallPath(toolCall);
+  if (!path) {
+    return false;
+  }
+
+  return isArtifactPath(path) || isWidgetPath(path);
 }
 
 export function AssistantMessage({
@@ -52,9 +79,10 @@ export function AssistantMessage({
         <ThinkingBlock key={parts.length} content={thinking} isStreaming={isStreaming} />
       );
     } else if (chunk.type === "toolCall") {
-      const tc = chunk as { id: string; name: string; arguments?: unknown };
+      const tc = chunk as ToolCall;
       const pending = pendingToolCalls?.has(tc.id) ?? false;
       const result = toolResultsById?.get(tc.id);
+      if (shouldHideToolCall(tc, result)) continue;
       const isSubagentCall = !!extractSubtasksFromToolCall(tc.name, tc.arguments);
       const shouldHidePendingToolCall =
         hidePendingToolCalls &&
