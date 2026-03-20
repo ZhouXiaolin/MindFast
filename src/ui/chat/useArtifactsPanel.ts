@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Artifact } from "../../ai/artifacts/types";
+import type { WorkspaceFile } from "../../ai/workspace/types";
 
 export interface ArtifactPanelItem {
   id: string;
-  artifact: Artifact;
+  artifact: WorkspaceFile;
   kind: "main" | "subtask";
   label: string;
 }
@@ -14,7 +14,7 @@ interface UseArtifactsPanelResult {
   hasArtifacts: boolean;
   openArtifact: (filename: string) => void;
   openPanel: () => void;
-  selectedArtifact: Artifact | null;
+  selectedArtifact: WorkspaceFile | null;
   selectedArtifactId: string | null;
   selectArtifact: (artifactId: string) => void;
   showArtifactsPanel: boolean;

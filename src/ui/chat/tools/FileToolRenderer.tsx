@@ -122,8 +122,9 @@ export function renderFileTool(
   const labels = toolName === "write"
     ? { streaming: "Writing file", complete: "Wrote file" }
     : { streaming: "Editing file", complete: "Edited file" };
-  const path = (params as { path?: string } | undefined)?.path;
+  const requestedPath = (params as { path?: string } | undefined)?.path;
   const details = getFileDetails(result);
+  const path = details?.path ?? requestedPath;
   const finalContent = details?.content;
   const draftContent = toolName === "write" ? (params as WriteToolArgs | undefined)?.content : undefined;
   const previewContent = finalContent ?? draftContent;

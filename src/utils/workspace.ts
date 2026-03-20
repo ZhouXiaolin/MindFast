@@ -154,5 +154,4 @@ export function buildSessionMetadata(
   };
 }
 
-// Note: extractArtifactsFromMessages is now in src/ai/artifacts/extract.ts
-// and is re-exported from this module for backward compatibility
+// Artifact extraction lives in src/ai/artifacts/extract.ts.

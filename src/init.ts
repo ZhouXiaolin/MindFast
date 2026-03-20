@@ -5,7 +5,7 @@ import {
   getEnabledModels as getEnabledModelsFromStorage,
   getModelForProvider as getModelForProviderFromAgent,
 } from "./ai/agent";
-import { ArtifactsStore } from "./ai/artifacts/store";
+import { WorkspaceStore } from "./ai/workspace/store";
 import {
   hydrateAppSettings,
   subscribeAppSettingsPersistence,
@@ -13,20 +13,20 @@ import {
 
 let storage: ExtendedAppStorage | null = null;
 let agent: Agent | null = null;
-let artifactsStore: ArtifactsStore | null = null;
+let workspaceStore: WorkspaceStore | null = null;
 let appSettingsPersistenceCleanup: (() => void) | null = null;
-let initPromise: Promise<{ storage: ExtendedAppStorage; agent: Agent; artifactsStore: ArtifactsStore }> | null = null;
+let initPromise: Promise<{ storage: ExtendedAppStorage; agent: Agent; workspaceStore: WorkspaceStore }> | null = null;
 
 /**
- * Initialize the application: storage, agent, and artifacts store
+ * Initialize the application: storage, agent, and workspace store
  */
 export async function initApp(): Promise<{
   storage: ExtendedAppStorage;
   agent: Agent;
-  artifactsStore: ArtifactsStore;
+  workspaceStore: WorkspaceStore;
 }> {
-  if (storage && agent && artifactsStore) {
-    return { storage, agent, artifactsStore };
+  if (storage && agent && workspaceStore) {
+    return { storage, agent, workspaceStore };
   }
   if (initPromise) {
     return initPromise;
@@ -41,21 +41,21 @@ export async function initApp(): Promise<{
       appSettingsPersistenceCleanup = subscribeAppSettingsPersistence(appStorage);
     }
 
-    // Initialize artifacts store
-    const store = new ArtifactsStore();
-    artifactsStore = store;
+    // Initialize workspace store
+    const store = new WorkspaceStore();
+    workspaceStore = store;
 
     // Initialize agent
     agent = await createAgent(appStorage, store);
 
-    return { storage: appStorage, agent, artifactsStore: store };
+    return { storage: appStorage, agent, workspaceStore: store };
   })();
 
   return initPromise;
 }
 
 /**
- * Alias for initApp() for backward compatibility
+ * Alias for initApp()
  */
 export { initApp as initPi };
 
@@ -67,10 +67,10 @@ export function getAppStorage(): ExtendedAppStorage | null {
 }
 
 /**
- * Get the artifacts store instance
+ * Get the workspace store instance
  */
-export function getArtifactsStore(): ArtifactsStore | null {
-  return artifactsStore;
+export function getWorkspaceStore(): WorkspaceStore | null {
+  return workspaceStore;
 }
 
 export async function getInitializedAppStorage(): Promise<ExtendedAppStorage> {

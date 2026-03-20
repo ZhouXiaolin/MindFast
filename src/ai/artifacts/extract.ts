@@ -1,7 +1,7 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { SubtaskRun } from "../subagent-types";
 import { isArtifactPath } from "../workspace-types";
-import { ArtifactsStore } from "./store";
+import { WorkspaceStore } from "../workspace/store";
 
 export type WorkspaceArtifactKind = "html" | "markdown" | "text";
 
@@ -66,7 +66,7 @@ export function extractArtifactsFromMessages(
   updatedAt: string,
   messages: AgentMessage[]
 ): SavedArtifactSummary[] {
-  const store = new ArtifactsStore();
+  const store = new WorkspaceStore();
   store.reconstructFromMessages(messages);
 
   return store
@@ -93,7 +93,7 @@ export function extractArtifactsFromSubtaskRuns(
   if (!runs) return [];
 
   return Object.entries(runs).flatMap(([runKey, run]) =>
-    run.artifacts
+    run.files
       .filter((artifact) => isArtifactPath(artifact.filename))
       .map((artifact, index) =>
         toSavedArtifactSummary(

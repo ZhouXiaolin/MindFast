@@ -1,8 +1,8 @@
 import { Agent } from "@mariozechner/pi-agent-core";
 import type { AgentMessage, AgentTool } from "@mariozechner/pi-agent-core";
 import { Type, type Static } from "@mariozechner/pi-ai";
-import { ArtifactsStore } from "./artifacts/store";
-import type { ArtifactMessage } from "./artifacts/types";
+import { WorkspaceStore } from "./workspace/store";
+import type { WorkspaceFileMessage } from "./workspace/types";
 import type { FileToolResultDetails } from "./workspace-types";
 
 const readParamsSchema = Type.Object({
@@ -25,16 +25,16 @@ type ReadToolArgs = Static<typeof readParamsSchema>;
 type WriteToolArgs = Static<typeof writeParamsSchema>;
 type EditToolArgs = Static<typeof editParamsSchema>;
 
-function appendArtifactMessage(
+function appendWorkspaceFileMessage(
   agent: Agent | null,
-  action: ArtifactMessage["action"],
+  action: WorkspaceFileMessage["action"],
   filename: string,
   content?: string
 ): void {
   if (!agent) return;
 
-  const message: ArtifactMessage = {
-    role: "artifact",
+  const message: WorkspaceFileMessage = {
+    role: "workspaceFile",
     action,
     filename,
     timestamp: new Date().toISOString(),
@@ -45,7 +45,7 @@ function appendArtifactMessage(
   agent.appendMessage(message as AgentMessage);
 }
 
-export function createReadTool(store: ArtifactsStore): AgentTool<typeof readParamsSchema, undefined> {
+export function createReadTool(store: WorkspaceStore): AgentTool<typeof readParamsSchema, undefined> {
   return {
     label: "Read",
     name: "read",
@@ -61,7 +61,7 @@ export function createReadTool(store: ArtifactsStore): AgentTool<typeof readPara
 }
 
 export function createWriteTool(
-  store: ArtifactsStore,
+  store: WorkspaceStore,
   getAgent: () => Agent | null
 ): AgentTool<typeof writeParamsSchema, FileToolResultDetails | undefined> {
   return {
@@ -69,8 +69,8 @@ export function createWriteTool(
     name: "write",
     description: "Create or overwrite a workspace file with full content.",
     parameters: writeParamsSchema,
-    execute: async (_toolCallId: string, args: WriteToolArgs) => {
-      const result = store.writeFile(args.path, args.content);
+    execute: async (toolCallId: string, args: WriteToolArgs) => {
+      const result = store.writeFile(args.path, args.content, toolCallId);
       if (typeof result === "string") {
         return {
           content: [{ type: "text", text: result }],
@@ -78,7 +78,7 @@ export function createWriteTool(
         };
       }
 
-      appendArtifactMessage(getAgent(), result.action, result.file.filename, result.file.content);
+      appendWorkspaceFileMessage(getAgent(), result.action, result.file.filename, result.file.content);
 
       return {
         content: [{ type: "text", text: result.message }],
@@ -93,7 +93,7 @@ export function createWriteTool(
 }
 
 export function createEditTool(
-  store: ArtifactsStore,
+  store: WorkspaceStore,
   getAgent: () => Agent | null
 ): AgentTool<typeof editParamsSchema, FileToolResultDetails | undefined> {
   return {
@@ -113,10 +113,10 @@ export function createEditTool(
         };
       }
 
-      // Only send artifact message for non-append edits
-      // Append operations are silent updates to existing artifacts
+      // Only persist non-append edits as workspace file messages.
+      // Append operations remain silent updates to existing files.
       if (!isAppend) {
-        appendArtifactMessage(getAgent(), "update", result.file.filename, result.file.content);
+        appendWorkspaceFileMessage(getAgent(), "update", result.file.filename, result.file.content);
       }
 
       return {

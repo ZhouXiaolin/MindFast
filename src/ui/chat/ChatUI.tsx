@@ -40,7 +40,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
   const autoScrollRef = useRef(true);
   const {
     agent,
-    artifactsList,
+    workspaceFiles,
     currentModel,
     isHydratingRef,
     isSessionReady,
@@ -79,7 +79,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
   } = useSubagentPanel(subagentTasks);
 
   const artifactItems = useMemo<ArtifactPanelItem[]>(() => {
-    const panelItems: ArtifactPanelItem[] = artifactsList
+    const panelItems: ArtifactPanelItem[] = workspaceFiles
       .filter((artifact) => isArtifactPath(artifact.filename))
       .map((artifact) => ({
         id: `main:${artifact.id}`,
@@ -89,7 +89,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
       }));
 
     for (const task of subagentTasks) {
-      for (const [index, artifact] of (task.run?.artifacts ?? []).entries()) {
+      for (const [index, artifact] of (task.run?.files ?? []).entries()) {
         if (!isArtifactPath(artifact.filename)) {
           continue;
         }
@@ -103,7 +103,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     }
 
     return panelItems;
-  }, [artifactsList, subagentTasks]);
+  }, [workspaceFiles, subagentTasks]);
 
   const {
     hasArtifacts,
@@ -171,7 +171,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
       try {
         agent.abort();
         agent.replaceMessages(messages.slice(0, messageIndex));
-        syncAgentState(agent, undefined, { reconstructArtifacts: true });
+        syncAgentState(agent, undefined, { reconstructWorkspace: true });
         await agent.prompt(t);
       } catch (error) {
         console.error(error);
@@ -192,7 +192,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
       try {
         agent.abort();
         agent.replaceMessages(messages.slice(0, messageIndex));
-        syncAgentState(agent, undefined, { reconstructArtifacts: true });
+        syncAgentState(agent, undefined, { reconstructWorkspace: true });
         await agent.prompt(t);
       } catch (error) {
         console.error(error);

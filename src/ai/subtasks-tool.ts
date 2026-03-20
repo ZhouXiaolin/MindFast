@@ -2,7 +2,7 @@ import { Agent } from "@mariozechner/pi-agent-core";
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { ExtendedAppStorage } from "../stores/init";
 import { defaultConvertToLlm } from "./convert";
-import { ArtifactsStore } from "./artifacts/store";
+import { WorkspaceStore } from "./workspace/store";
 import { createEditTool, createReadTool, createWriteTool } from "./file-tools";
 import { once } from "./once";
 import { getSubtaskRunKey, type Subtask } from "./subagent-types";
@@ -133,6 +133,7 @@ export async function runSubtasks(
   toolCallId: string,
   subtasks: Subtask[],
   storage: ExtendedAppStorage,
+  sharedStore: WorkspaceStore,
   getAgent: () => Agent | null,
   signal?: AbortSignal
 ): Promise<{
@@ -158,16 +159,35 @@ export async function runSubtasks(
     subtask: Subtask
   ): Promise<{ ok: boolean; id: string; label: string; summary: string; tokenCount: number; summarizedFrom?: number }> => {
     let childAgent: Agent | null = null;
-    const childStore = new ArtifactsStore();
+    const touchedPaths = new Set<string>();
     let unsubscribe: (() => void) | undefined;
     let abortListener: (() => void) | undefined;
     const runKey = getSubtaskRunKey(toolCallId, subtask.id);
 
     try {
-      let currentChildAgent: Agent | null = null;
-      const readTool = createReadTool(childStore);
-      const writeTool = createWriteTool(childStore, () => currentChildAgent);
-      const editTool = createEditTool(childStore, () => currentChildAgent);
+      const readTool = createReadTool(sharedStore);
+      const baseWriteTool = createWriteTool(sharedStore, () => parentAgent);
+      const writeTool = {
+        ...baseWriteTool,
+        execute: async (childToolCallId: string, args: Parameters<typeof baseWriteTool.execute>[1], childSignal?: AbortSignal) => {
+          const result = await baseWriteTool.execute(childToolCallId, args, childSignal);
+          if (result.details?.path) {
+            touchedPaths.add(result.details.path);
+          }
+          return result;
+        },
+      };
+      const baseEditTool = createEditTool(sharedStore, () => parentAgent);
+      const editTool = {
+        ...baseEditTool,
+        execute: async (childToolCallId: string, args: Parameters<typeof baseEditTool.execute>[1], childSignal?: AbortSignal) => {
+          const result = await baseEditTool.execute(childToolCallId, args, childSignal);
+          if (result.details?.path) {
+            touchedPaths.add(result.details.path);
+          }
+          return result;
+        },
+      };
 
       childAgent = new Agent({
         initialState: {
@@ -183,14 +203,17 @@ export async function runSubtasks(
           return key ?? undefined;
         },
       });
-      currentChildAgent = childAgent;
 
       const syncRunState = () => {
+        const files = Array.from(touchedPaths)
+          .map((path) => sharedStore.files.get(path))
+          .filter((file): file is NonNullable<typeof file> => file !== undefined);
+
         upsertSubtaskRun(runKey, {
           messages: childAgent!.state.messages.slice(),
           streamMessage: cloneMessage(childAgent!.state.streamMessage ?? null),
           isStreaming: childAgent!.state.isStreaming,
-          artifacts: childStore.getSnapshot().map(([, artifact]) => artifact),
+          files,
         });
       };
 
@@ -198,7 +221,7 @@ export async function runSubtasks(
         messages: [],
         streamMessage: null,
         isStreaming: true,
-        artifacts: [],
+        files: [],
       });
 
       unsubscribe = childAgent.subscribe(() => {
@@ -226,11 +249,15 @@ export async function runSubtasks(
         summarizedFrom: summary.summarizedFrom,
       };
     } catch (error) {
+      const files = Array.from(touchedPaths)
+        .map((path) => sharedStore.files.get(path))
+        .filter((file): file is NonNullable<typeof file> => file !== undefined);
+
       upsertSubtaskRun(runKey, {
         messages: childAgent?.state.messages.slice() ?? [],
         streamMessage: cloneMessage(childAgent?.state.streamMessage ?? null),
         isStreaming: false,
-        artifacts: childStore.getSnapshot().map(([, artifact]) => artifact),
+        files,
         error: error instanceof Error ? error.message : "Subtask failed",
       });
       return { ok: false, id: subtask.id, label: subtask.label, summary: "", tokenCount: 0 };

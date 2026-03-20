@@ -1,5 +1,5 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
-import type { Artifact } from "./artifacts/types";
+import type { WorkspaceFile } from "./workspace/types";
 import {
   BASH_TOOL_NAME,
   SUBAGENT_BASH_COMMAND,
@@ -25,7 +25,7 @@ export interface SubtaskRun {
   messages: AgentMessage[];
   streamMessage: AgentMessage | null;
   isStreaming: boolean;
-  artifacts: Artifact[];
+  files: WorkspaceFile[];
   error?: string;
 }
 

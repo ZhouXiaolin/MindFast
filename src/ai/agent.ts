@@ -5,7 +5,7 @@ import type { ExtendedAppStorage } from "../stores/init";
 import { defaultConvertToLlm } from "./convert";
 import { getApiKeyPromptHandler } from "./api-key-prompt";
 import { isKnownProvider, getCustomProviderModels } from "./providers";
-import type { ArtifactsStore } from "./artifacts/store";
+import type { WorkspaceStore } from "./workspace/store";
 import { createEditTool, createReadTool, createWriteTool } from "./file-tools";
 import { createBashTool } from "./tools";
 
@@ -17,10 +17,11 @@ This environment only exposes four base tools: read, write, edit, and bash.
 
 Use read to inspect an existing workspace file.
 Use write to create a new workspace file or overwrite an existing one with full content.
+Write may return a final filename with a short unique suffix added before the extension. Always use the returned filename for later read or edit calls.
 Use edit for targeted text replacement inside an existing file. Prefer edit over write when changing only part of a file.
 Use edit with append=true when you need to silently append content to the end of an existing file. In append mode, provide new_str as the content to append and do not rely on old_str.
 
-Artifact rendering is driven by path conventions, not by a dedicated tool:
+Workspace behavior is driven by path conventions, not by separate stores:
 - Save files under artifacts/ when the user wants a persistent artifact shown in the artifacts panel.
 - Save files under widgets/ when the user wants an inline widget rendered in the chat.
 - Save files elsewhere only when you need workspace state but no artifact/widget rendering.
@@ -136,14 +137,14 @@ export async function getDefaultModel(storage: ExtendedAppStorage): Promise<Mode
  */
 export async function createAgent(
   storage: ExtendedAppStorage,
-  artifactsStore: ArtifactsStore
+  workspaceStore: WorkspaceStore
 ): Promise<Agent> {
   const defaultModel = await getDefaultModel(storage);
 
-  const readTool = createReadTool(artifactsStore);
-  const writeTool = createWriteTool(artifactsStore, () => agent);
-  const editTool = createEditTool(artifactsStore, () => agent);
-  const bashTool = createBashTool(storage, artifactsStore, () => agent);
+  const readTool = createReadTool(workspaceStore);
+  const writeTool = createWriteTool(workspaceStore, () => agent);
+  const editTool = createEditTool(workspaceStore, () => agent);
+  const bashTool = createBashTool(storage, workspaceStore, () => agent);
 
   const agent = new Agent({
     initialState: {

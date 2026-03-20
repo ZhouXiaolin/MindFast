@@ -40,7 +40,7 @@ export function MessageList({
 
   for (const [messageIndex, msg] of messages.entries()) {
     const role = (msg as { role: string }).role;
-    if (role === "artifact") continue;
+    if (role === "workspaceFile") continue;
 
     if (role === "user" || role === "user-with-attachments") {
       items.push(

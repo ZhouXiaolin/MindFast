@@ -1,7 +1,7 @@
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { Type, type Static } from "@mariozechner/pi-ai";
 import type { ExtendedAppStorage } from "../stores/init";
-import { ArtifactsStore, formatWorkspaceEntries } from "./artifacts/store";
+import { WorkspaceStore, formatWorkspaceEntries } from "./workspace/store";
 import { runSubtasks } from "./subtasks-tool";
 import {
   BASH_TOOL_NAME,
@@ -32,7 +32,7 @@ function splitCommand(command: string): string[] {
 }
 
 function runBashCommand(
-  store: ArtifactsStore,
+  store: WorkspaceStore,
   args: BashToolArgs
 ): { text: string; details: BashCommandResultDetails } {
   const parts = splitCommand(args.command.trim());
@@ -103,7 +103,7 @@ function runBashCommand(
 
 export function createBashTool(
   storage: ExtendedAppStorage,
-  store: ArtifactsStore,
+  store: WorkspaceStore,
   getAgent: () => import("@mariozechner/pi-agent-core").Agent | null
 ): AgentTool<typeof bashParamsSchema, BashCommandResultDetails | BashSubagentResultDetails> {
   return {
@@ -124,7 +124,7 @@ export function createBashTool(
           };
         }
 
-        const result = await runSubtasks(toolCallId, payload.subtasks, storage, getAgent, signal);
+        const result = await runSubtasks(toolCallId, payload.subtasks, storage, store, getAgent, signal);
         return {
           content: [{ type: "text", text: result.summaryText }],
           details: {

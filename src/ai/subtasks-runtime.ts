@@ -36,9 +36,9 @@ function getRunsSignature(runs: Record<string, SubtaskRun>): string {
 function normalizeRun(runKey: string, run: SubtaskRun): SubtaskRun {
 	return {
 		...run,
-		artifacts: run.artifacts.map((artifact, index) => ({
-			...artifact,
-			id: artifact.id ?? `subtask:${runKey}:${index}:${artifact.filename}`,
+		files: run.files.map((file, index) => ({
+			...file,
+			id: file.id ?? `subtask:${runKey}:${index}:${file.filename}`,
 		})),
 	};
 }

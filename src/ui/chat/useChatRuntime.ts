@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Agent, AgentMessage, ThinkingLevel } from "@mariozechner/pi-agent-core";
 import type { Model } from "@mariozechner/pi-ai";
-import type { ArtifactsStore } from "../../ai/artifacts/store";
-import type { Artifact } from "../../ai/artifacts/types";
+import type { WorkspaceStore } from "../../ai/workspace/store";
+import type { WorkspaceFile } from "../../ai/workspace/types";
 import { getInitializedAppStorage, initApp } from "../../init";
 import { initializeSubtaskRuntime } from "../../ai/subtasks-runtime";
 import { getDefaultModel } from "../../ai/agent";
@@ -14,7 +14,7 @@ interface ChatRuntimeState {
   messages: AgentMessage[];
   streamMessage: AgentMessage | null;
   isStreaming: boolean;
-  artifactsList: Artifact[];
+  workspaceFiles: WorkspaceFile[];
 }
 
 interface UseChatRuntimeResult extends ChatRuntimeState {
@@ -22,8 +22,8 @@ interface UseChatRuntimeResult extends ChatRuntimeState {
   isSessionReady: () => boolean;
   syncAgentState: (
     nextAgent: Agent,
-    store?: ArtifactsStore | null,
-    options?: { reconstructArtifacts?: boolean }
+    store?: WorkspaceStore | null,
+    options?: { reconstructWorkspace?: boolean }
   ) => void;
 }
 
@@ -41,22 +41,22 @@ const INITIAL_RUNTIME_STATE: ChatRuntimeState = {
   messages: [],
   streamMessage: null,
   isStreaming: false,
-  artifactsList: [],
+  workspaceFiles: [],
 };
 
 export function useChatRuntime(sessionId: string): UseChatRuntimeResult {
   const [runtimeState, setRuntimeState] = useState<ChatRuntimeState>(INITIAL_RUNTIME_STATE);
-  const artifactsStoreRef = useRef<ArtifactsStore | null>(null);
+  const workspaceStoreRef = useRef<WorkspaceStore | null>(null);
   const hydratedSessionRef = useRef<string | null>(null);
   const isHydratingRef = useRef(false);
 
   const syncAgentState = useCallback((
     nextAgent: Agent,
-    store?: ArtifactsStore | null,
-    options?: { reconstructArtifacts?: boolean }
+    store?: WorkspaceStore | null,
+    options?: { reconstructWorkspace?: boolean }
   ) => {
-    const nextStore = store ?? artifactsStoreRef.current;
-    if (options?.reconstructArtifacts) {
+    const nextStore = store ?? workspaceStoreRef.current;
+    if (options?.reconstructWorkspace) {
       nextStore?.reconstructFromMessages(nextAgent.state.messages);
     }
     setRuntimeState((state) => ({
@@ -73,22 +73,22 @@ export function useChatRuntime(sessionId: string): UseChatRuntimeResult {
     let unsubscribe: (() => void) | undefined;
 
     void initApp()
-      .then(({ agent, artifactsStore }) => {
+      .then(({ agent, workspaceStore }) => {
         setRuntimeState((state) => ({ ...state, agent }));
-        artifactsStoreRef.current = artifactsStore;
-        syncAgentState(agent, artifactsStore, { reconstructArtifacts: true });
+        workspaceStoreRef.current = workspaceStore;
+        syncAgentState(agent, workspaceStore, { reconstructWorkspace: true });
         setRuntimeState((state) => ({
           ...state,
-          artifactsList: artifactsStore.getSnapshot().map(([, artifact]) => artifact),
+          workspaceFiles: workspaceStore.getSnapshot().map(([, file]) => file),
         }));
-        artifactsStore.onChange = () => {
+        workspaceStore.onChange = () => {
           setRuntimeState((state) => ({
             ...state,
-            artifactsList: artifactsStore.getSnapshot().map(([, artifact]) => artifact),
+            workspaceFiles: workspaceStore.getSnapshot().map(([, file]) => file),
           }));
         };
         unsubscribe = agent.subscribe(() => {
-          syncAgentState(agent, artifactsStore);
+          syncAgentState(agent, workspaceStore);
         });
       })
       .catch((error) => {
@@ -97,9 +97,9 @@ export function useChatRuntime(sessionId: string): UseChatRuntimeResult {
 
     return () => {
       unsubscribe?.();
-      if (artifactsStoreRef.current) {
-        artifactsStoreRef.current.onChange = null;
-        artifactsStoreRef.current = null;
+      if (workspaceStoreRef.current) {
+        workspaceStoreRef.current.onChange = null;
+        workspaceStoreRef.current = null;
       }
     };
   }, [syncAgentState]);
@@ -142,7 +142,7 @@ export function useChatRuntime(sessionId: string): UseChatRuntimeResult {
         await initializeSubtaskRuntime(sessionId, storage.subtaskRuns);
 
         hydratedSessionRef.current = sessionId;
-        syncAgentState(agent, undefined, { reconstructArtifacts: true });
+        syncAgentState(agent, undefined, { reconstructWorkspace: true });
       } catch (error) {
         console.error("Failed to hydrate chat session:", error);
       } finally {
