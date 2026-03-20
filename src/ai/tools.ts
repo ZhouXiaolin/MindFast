@@ -35,69 +35,76 @@ function runBashCommand(
   store: WorkspaceStore,
   args: BashToolArgs
 ): { text: string; details: BashCommandResultDetails } {
-  const parts = splitCommand(args.command.trim());
-  if (parts.length === 0) {
+  try {
+    const parts = splitCommand(args.command.trim());
+    if (parts.length === 0) {
+      return {
+        text: "Error: bash command cannot be empty",
+        details: { kind: "command", command: args.command },
+      };
+    }
+
+    const [command, ...rest] = parts;
+    switch (command) {
+      case "pwd":
+        return {
+          text: "/",
+          details: { kind: "command", command: args.command },
+        };
+      case "ls": {
+        const targetPath = rest[0] ?? "";
+        const entries = store.listEntries(targetPath);
+        return {
+          text: entries ? formatWorkspaceEntries(entries) : `Error: Path ${targetPath} not found`,
+          details: { kind: "command", command: args.command },
+        };
+      }
+      case "cat": {
+        const targetPath = rest[0];
+        return {
+          text: targetPath ? store.readFile(targetPath) : "Error: cat requires a path",
+          details: { kind: "command", command: args.command },
+        };
+      }
+      case "find": {
+        const targetPath = rest[0] ?? "";
+        const query = rest[1] ?? "";
+        return {
+          text: formatWorkspaceEntries(store.findEntries(query, targetPath)),
+          details: { kind: "command", command: args.command },
+        };
+      }
+      case "mkdir": {
+        const targetPath = rest.filter((part) => part !== "-p")[0];
+        return {
+          text: targetPath ? store.mkdir(targetPath) : "Error: mkdir requires a path",
+          details: { kind: "command", command: args.command },
+        };
+      }
+      case "help":
+        return {
+          text: [
+            "Supported commands:",
+            "pwd",
+            "ls [path]",
+            "cat <path>",
+            "find [path] [query]",
+            "mkdir -p <path>",
+            "subagent  # provide JSON payload through stdin",
+          ].join("\n"),
+          details: { kind: "command", command: args.command },
+        };
+      default:
+        return {
+          text: `Error: Unsupported bash command ${command}`,
+          details: { kind: "command", command: args.command },
+        };
+    }
+  } catch (error) {
     return {
-      text: "Error: bash command cannot be empty",
+      text: `Error: ${error instanceof Error ? error.message : String(error)}`,
       details: { kind: "command", command: args.command },
     };
-  }
-
-  const [command, ...rest] = parts;
-  switch (command) {
-    case "pwd":
-      return {
-        text: "/",
-        details: { kind: "command", command: args.command },
-      };
-    case "ls": {
-      const targetPath = rest[0] ?? "";
-      const entries = store.listEntries(targetPath);
-      return {
-        text: entries ? formatWorkspaceEntries(entries) : `Error: Path ${targetPath} not found`,
-        details: { kind: "command", command: args.command },
-      };
-    }
-    case "cat": {
-      const targetPath = rest[0];
-      return {
-        text: targetPath ? store.readFile(targetPath) : "Error: cat requires a path",
-        details: { kind: "command", command: args.command },
-      };
-    }
-    case "find": {
-      const targetPath = rest[0] ?? "";
-      const query = rest[1] ?? "";
-      return {
-        text: formatWorkspaceEntries(store.findEntries(query, targetPath)),
-        details: { kind: "command", command: args.command },
-      };
-    }
-    case "mkdir": {
-      const targetPath = rest.filter((part) => part !== "-p")[0];
-      return {
-        text: targetPath ? store.mkdir(targetPath) : "Error: mkdir requires a path",
-        details: { kind: "command", command: args.command },
-      };
-    }
-    case "help":
-      return {
-        text: [
-          "Supported commands:",
-          "pwd",
-          "ls [path]",
-          "cat <path>",
-          "find [path] [query]",
-          "mkdir -p <path>",
-          "subagent  # provide JSON payload through stdin",
-        ].join("\n"),
-        details: { kind: "command", command: args.command },
-      };
-    default:
-      return {
-        text: `Error: Unsupported bash command ${command}`,
-        details: { kind: "command", command: args.command },
-      };
   }
 }
 

@@ -7,6 +7,8 @@ export const SUBAGENT_BASH_COMMAND = "subagent";
 
 export interface ReadToolParams {
   path: string;
+  offset?: number;
+  limit?: number;
 }
 
 export interface WriteToolParams {
@@ -29,6 +31,8 @@ export interface FileToolResultDetails {
   path: string;
   content: string;
   action: "create" | "update";
+  diff?: string;
+  firstChangedLine?: number;
 }
 
 export interface BashSubagentPayload {
@@ -51,12 +55,46 @@ function trimSlashes(value: string): string {
   return value.replace(/^\/+|\/+$/g, "");
 }
 
-export function normalizeWorkspacePath(inputPath: string): string {
-  const segments = inputPath
+function splitWorkspacePath(inputPath: string): string[] {
+  return inputPath
     .replace(/\\/g, "/")
     .split("/")
     .map((segment) => segment.trim())
     .filter((segment) => segment.length > 0 && segment !== ".");
+}
+
+export function getWorkspacePathValidationError(inputPath: string): string | null {
+  const trimmedPath = inputPath.trim();
+  if (!trimmedPath) {
+    return "Path must not be empty.";
+  }
+
+  if (trimmedPath.startsWith("~")) {
+    return "Home-relative paths are not supported in the browser workspace.";
+  }
+
+  if (/^[a-zA-Z]:[\\/]/.test(trimmedPath)) {
+    return "Host filesystem paths are not supported in the browser workspace.";
+  }
+
+  const normalized: string[] = [];
+  for (const segment of splitWorkspacePath(trimmedPath)) {
+    if (segment === "..") {
+      if (normalized.length === 0) {
+        return `Path ${inputPath} escapes the workspace root.`;
+      }
+      normalized.pop();
+      continue;
+    }
+
+    normalized.push(segment);
+  }
+
+  return normalized.length === 0 ? "Path must point to a workspace entry." : null;
+}
+
+export function normalizeWorkspacePath(inputPath: string): string {
+  const segments = splitWorkspacePath(inputPath);
 
   const normalized: string[] = [];
   for (const segment of segments) {

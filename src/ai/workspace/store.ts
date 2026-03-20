@@ -1,6 +1,14 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { ToolCall } from "@mariozechner/pi-ai";
-import { ARTIFACTS_DIR, WIDGETS_DIR, getDisplayPath, getParentPath, normalizeWorkspacePath } from "../workspace-types";
+import {
+  ARTIFACTS_DIR,
+  WIDGETS_DIR,
+  getDisplayPath,
+  getParentPath,
+  getWorkspacePathValidationError,
+  normalizeWorkspacePath,
+} from "../workspace-types";
+import { computeEdit } from "./file-tool-utils";
 import type { WorkspaceFile, WorkspaceFileMessage, WorkspaceParams } from "./types";
 
 function createWorkspaceFileId(seed?: string): string {
@@ -21,6 +29,8 @@ interface WriteFileResult {
 
 interface EditFileResult {
   file: WorkspaceFile;
+  firstChangedLine: number;
+  diff: string;
   message: string;
 }
 
@@ -31,9 +41,9 @@ interface WorkspaceEntry {
 
 function createNotFoundMessage(path: string, availablePaths: string[]): string {
   if (availablePaths.length === 0) {
-    return `Error: File ${path} not found. No files have been created yet.`;
+    return `File ${path} not found. No files have been created yet.`;
   }
-  return `Error: File ${path} not found. Available files: ${availablePaths.join(", ")}`;
+  return `File ${path} not found. Available files: ${availablePaths.join(", ")}`;
 }
 
 function sortEntries(entries: WorkspaceEntry[]): WorkspaceEntry[] {
@@ -88,6 +98,28 @@ function createUniqueWritePath(path: string, suffixSeed?: string): string {
   return segments.length > 0 ? `${segments.join("/")}/${suffixedFilename}` : suffixedFilename;
 }
 
+function getNormalizedWorkspacePath(path: string, action: string, allowRoot = false): string {
+  const trimmedPath = path.trim();
+  if (!trimmedPath) {
+    throw new Error(`${action} requires a non-empty path`);
+  }
+
+  const validationError = getWorkspacePathValidationError(trimmedPath);
+  if (validationError) {
+    if (allowRoot && (trimmedPath === "/" || trimmedPath === ".")) {
+      return "";
+    }
+    throw new Error(validationError);
+  }
+
+  const normalizedPath = normalizeWorkspacePath(trimmedPath);
+  if (!normalizedPath && !allowRoot) {
+    throw new Error(`${action} requires a non-empty path`);
+  }
+
+  return normalizedPath;
+}
+
 export class WorkspaceStore {
   private _files = new Map<string, WorkspaceFile>();
   private _directories = new Set<string>();
@@ -136,9 +168,18 @@ export class WorkspaceStore {
   }
 
   hasPath(path: string): boolean {
-    const normalizedPath = normalizeWorkspacePath(path);
+    const normalizedPath = path ? normalizeWorkspacePath(path) : "";
     if (!normalizedPath) return true;
     return this._files.has(normalizedPath) || this._directories.has(normalizedPath);
+  }
+
+  getFile(path: string): WorkspaceFile {
+    const normalizedPath = getNormalizedWorkspacePath(path, "read");
+    const existing = this._files.get(normalizedPath);
+    if (!existing) {
+      throw new Error(createNotFoundMessage(normalizedPath, this.listAllPaths()));
+    }
+    return existing;
   }
 
   private upsertFile(path: string, content: string, existingId?: string): WorkspaceFile {
@@ -159,12 +200,8 @@ export class WorkspaceStore {
     return file;
   }
 
-  writeFile(path: string, content: string, suffixSeed?: string): WriteFileResult | string {
-    const normalizedPath = normalizeWorkspacePath(path);
-    if (!normalizedPath) {
-      return "Error: write requires a non-empty path";
-    }
-
+  writeFile(path: string, content: string, suffixSeed?: string): WriteFileResult {
+    const normalizedPath = getNormalizedWorkspacePath(path, "write");
     const finalPath = createUniqueWritePath(normalizedPath, suffixSeed);
     const existing = this._files.get(finalPath);
     const file = this.upsertFile(finalPath, content, existing?.id);
@@ -175,53 +212,29 @@ export class WorkspaceStore {
     };
   }
 
-  editFile(path: string, oldText: string, newText: string): EditFileResult | string {
-    const normalizedPath = normalizeWorkspacePath(path);
-    if (!normalizedPath) {
-      return "Error: edit requires a non-empty path";
-    }
+  editFile(path: string, oldText: string, newText: string): EditFileResult {
+    const existing = this.getFile(path);
+    const normalizedPath = existing.filename;
+    const edit = computeEdit(existing.content, oldText, newText);
+    const file = this.upsertFile(normalizedPath, edit.content, existing.id);
 
-    const existing = this._files.get(normalizedPath);
-    if (!existing) {
-      return createNotFoundMessage(normalizedPath, this.listAllPaths());
-    }
-
-    if (!oldText) {
-      return "Error: edit requires old_str";
-    }
-    if (!existing.content.includes(oldText)) {
-      return `Error: String not found in file. Here is the full content:\n\n${existing.content}`;
-    }
-
-    const file = this.upsertFile(normalizedPath, existing.content.replace(oldText, newText), existing.id);
     return {
       file,
+      firstChangedLine: edit.firstChangedLine,
+      diff: edit.diff,
       message: `Edited file ${normalizedPath}`,
     };
   }
 
   readFile(path: string): string {
-    const normalizedPath = normalizeWorkspacePath(path);
-    if (!normalizedPath) {
-      return "Error: read requires a non-empty path";
-    }
-
-    const existing = this._files.get(normalizedPath);
-    if (!existing) {
-      return createNotFoundMessage(normalizedPath, this.listAllPaths());
-    }
-    return existing.content;
+    return this.getFile(path).content;
   }
 
   deleteFile(path: string): string {
-    const normalizedPath = normalizeWorkspacePath(path);
-    if (!normalizedPath) {
-      return "Error: delete requires a non-empty path";
-    }
-
+    const normalizedPath = getNormalizedWorkspacePath(path, "delete");
     const existing = this._files.get(normalizedPath);
     if (!existing) {
-      return createNotFoundMessage(normalizedPath, this.listAllPaths());
+      throw new Error(createNotFoundMessage(normalizedPath, this.listAllPaths()));
     }
 
     this._files.delete(normalizedPath);
@@ -231,11 +244,7 @@ export class WorkspaceStore {
   }
 
   mkdir(path: string): string {
-    const normalizedPath = normalizeWorkspacePath(path);
-    if (!normalizedPath) {
-      return "Error: mkdir requires a non-empty path";
-    }
-
+    const normalizedPath = getNormalizedWorkspacePath(path, "mkdir");
     const sizeBefore = this._directories.size;
     this.ensureDirectory(normalizedPath);
     if (this._directories.size !== sizeBefore) {
@@ -245,7 +254,9 @@ export class WorkspaceStore {
   }
 
   listEntries(path = ""): WorkspaceEntry[] | null {
-    const normalizedPath = normalizeWorkspacePath(path);
+    const normalizedPath = path.trim()
+      ? getNormalizedWorkspacePath(path, "ls", true)
+      : "";
     const prefix = normalizedPath ? `${normalizedPath}/` : "";
 
     if (normalizedPath && !this.hasPath(normalizedPath)) {
@@ -294,14 +305,16 @@ export class WorkspaceStore {
 
   findEntries(query = "", path = ""): WorkspaceEntry[] {
     const normalizedQuery = query.trim().toLowerCase();
+    const normalizedFilterPath = path.trim()
+      ? getNormalizedWorkspacePath(path, "find", true)
+      : "";
     const entries = [
       ...Array.from(this._directories).map((directoryPath) => ({ path: directoryPath, type: "dir" as const })),
       ...this.listAllPaths().map((filePath) => ({ path: filePath, type: "file" as const })),
     ]
       .filter((entry) => {
-        if (!path) return true;
-        const normalizedPath = normalizeWorkspacePath(path);
-        return entry.path === normalizedPath || entry.path.startsWith(`${normalizedPath}/`);
+        if (!normalizedFilterPath) return true;
+        return entry.path === normalizedFilterPath || entry.path.startsWith(`${normalizedFilterPath}/`);
       })
       .filter((entry) => {
         if (!normalizedQuery) return true;
@@ -316,30 +329,32 @@ export class WorkspaceStore {
   }
 
   async executeCommand(params: WorkspaceParams): Promise<string> {
-    switch (params.command) {
-      case "create":
-      case "rewrite": {
-        if (params.content === undefined) {
-          return `Error: ${params.command} command requires content`;
+    try {
+      switch (params.command) {
+        case "create":
+        case "rewrite": {
+          if (params.content === undefined) {
+            return `Error: ${params.command} command requires content`;
+          }
+          return this.writeFile(params.filename, params.content).message;
         }
-        const result = this.writeFile(params.filename, params.content);
-        return typeof result === "string" ? result : result.message;
-      }
-      case "update": {
-        if (params.old_str === undefined || params.new_str === undefined) {
-          return "Error: update command requires old_str and new_str";
+        case "update": {
+          if (params.old_str === undefined || params.new_str === undefined) {
+            return "Error: update command requires old_str and new_str";
+          }
+          return this.editFile(params.filename, params.old_str, params.new_str).message;
         }
-        const result = this.editFile(params.filename, params.old_str, params.new_str);
-        return typeof result === "string" ? result : result.message;
+        case "get":
+          return this.readFile(params.filename);
+        case "delete":
+          return this.deleteFile(params.filename);
+        case "logs":
+          return this.getLogs(params.filename);
+        default:
+          return `Error: Unknown command ${(params as WorkspaceParams).command}`;
       }
-      case "get":
-        return this.readFile(params.filename);
-      case "delete":
-        return this.deleteFile(params.filename);
-      case "logs":
-        return this.getLogs(params.filename);
-      default:
-        return `Error: Unknown command ${(params as WorkspaceParams).command}`;
+    } catch (error) {
+      return `Error: ${error instanceof Error ? error.message : String(error)}`;
     }
   }
 
@@ -427,8 +442,12 @@ export class WorkspaceStore {
           const args = (toolCall as ToolCall & {
             arguments: { path?: string; old_str?: string; new_str?: string };
           }).arguments;
-          const finalPath = (toolResult as { details?: { path?: string } }).details?.path ?? args.path;
-          if (!finalPath || args.new_str === undefined) {
+          const details = toolResult as {
+            details?: { path?: string; content?: string };
+          };
+          const finalPath = details.details?.path ?? args.path;
+          const finalContent = details.details?.content;
+          if (!finalPath) {
             continue;
           }
 
@@ -436,15 +455,20 @@ export class WorkspaceStore {
           const existing = finalFiles.get(normalizedPath);
           if (!existing) continue;
 
-          if (args.old_str === undefined) {
+          if (finalContent !== undefined) {
+            upsert(normalizedPath, finalContent, existing.id);
             continue;
           }
 
-          upsert(
-            normalizedPath,
-            existing.content.replace(args.old_str, args.new_str),
-            existing.id
-          );
+          if (args.old_str === undefined || args.new_str === undefined) {
+            continue;
+          }
+
+          try {
+            upsert(normalizedPath, computeEdit(existing.content, args.old_str, args.new_str).content, existing.id);
+          } catch {
+            continue;
+          }
         }
       }
     }
