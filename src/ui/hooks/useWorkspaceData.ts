@@ -7,6 +7,11 @@ import {
   extractArtifactsFromSubtaskRuns,
   type SavedArtifactSummary,
 } from "../../ai/artifacts/extract";
+import {
+  extractWidgetsFromMessages,
+  extractWidgetsFromSubtaskRuns,
+  type SavedWidgetSummary,
+} from "../../ai/widgets/extract";
 
 export function useSessionMetadataList() {
   const workspaceRevision = useAppStore((state) => state.workspaceRevision);
@@ -122,4 +127,82 @@ export function useSavedArtifacts() {
   }, [workspaceRevision]);
 
   return { artifacts, loading };
+}
+
+export function useSavedWidgets() {
+  const workspaceRevision = useAppStore((state) => state.workspaceRevision);
+  const [widgets, setWidgets] = useState<SavedWidgetSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        const storage = await getInitializedAppStorage();
+        const metadataList = await storage.sessions.getAllMetadata();
+        const sessions = await Promise.all(
+          metadataList.map(async (metadata) => {
+            const data = await storage.sessions.loadSession(metadata.id);
+            const subtaskRuns = await storage.subtaskRuns.getSessionRuns(metadata.id);
+            return { metadata, data, subtaskRuns };
+          })
+        );
+
+        const allWidgets = sessions.flatMap(({ metadata, data, subtaskRuns }) => {
+          const sessionTitle = metadata.title || data?.title || "Untitled chat";
+          const messageWidgets = data
+            ? extractWidgetsFromMessages(
+              metadata.id,
+              sessionTitle,
+              metadata.lastModified,
+              data.messages
+            )
+            : [];
+          const subtaskWidgets = extractWidgetsFromSubtaskRuns(
+            metadata.id,
+            sessionTitle,
+            metadata.lastModified,
+            subtaskRuns
+          );
+
+          return [...messageWidgets, ...subtaskWidgets];
+        });
+
+        const dedupedWidgets = new Map<string, SavedWidgetSummary>();
+        for (const widget of allWidgets) {
+          const dedupeKey = `${widget.sessionId}:${widget.filename}`;
+          const existing = dedupedWidgets.get(dedupeKey);
+          if (!existing || widget.updatedAt > existing.updatedAt) {
+            dedupedWidgets.set(dedupeKey, widget);
+          }
+        }
+
+        const finalWidgets = Array.from(dedupedWidgets.values());
+        finalWidgets.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+
+        if (!cancelled) {
+          setWidgets(finalWidgets);
+        }
+      } catch (error) {
+        console.error("Failed to load widgets:", error);
+        if (!cancelled) {
+          setWidgets([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceRevision]);
+
+  return { widgets, loading };
 }

@@ -35,7 +35,7 @@ export function Layout() {
     { labelKey: "chats", path: "/chats", icon: <MessageCircle className="h-5 w-5 shrink-0" /> },
     { labelKey: "projects", path: "/projects", icon: <FolderOpen className="h-5 w-5 shrink-0" /> },
     { labelKey: "artifacts", path: "/artifacts", icon: <Box className="h-5 w-5 shrink-0" /> },
-    { labelKey: "code", path: "/code", icon: <Code className="h-5 w-5 shrink-0" /> },
+    { labelKey: "widgets", path: "/widgets", icon: <Code className="h-5 w-5 shrink-0" /> },
   ];
 
   return (
@@ -120,14 +120,7 @@ export function Layout() {
                 }
               >
                 {item.icon}
-                {sidebarOpen && (
-                  <span className="min-w-0 flex-1 truncate">
-                    {t(item.labelKey)}
-                    {item.labelKey === "code" && (
-                      <span className="ml-1 text-xs text-sidebar-muted">· {t("upgrade")}</span>
-                    )}
-                  </span>
-                )}
+                {sidebarOpen && <span className="min-w-0 flex-1 truncate">{t(item.labelKey)}</span>}
               </NavLink>
             ))}
 

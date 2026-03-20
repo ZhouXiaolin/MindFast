@@ -6,6 +6,8 @@ import { PlaceholderPage } from "./ui/layout/PlaceholderPage";
 import { ChatsPage } from "./ui/layout/ChatsPage";
 import { ArtifactsPage } from "./ui/artifacts/ArtifactsPage";
 import { ArtifactDetailPage } from "./ui/artifacts/ArtifactDetailPage";
+import { WidgetsPage } from "./ui/widgets/WidgetsPage";
+import { WidgetDetailPage } from "./ui/widgets/WidgetDetailPage";
 import { SettingsLayout } from "./ui/settings/SettingsLayout";
 import { SettingsGeneral } from "./ui/settings/SettingsGeneral";
 import { SettingsThemePresets } from "./ui/settings/SettingsThemePresets";
@@ -23,7 +25,9 @@ export const router = createBrowserRouter([
       { path: "projects", element: <PlaceholderPage /> },
       { path: "artifacts", element: <ArtifactsPage /> },
       { path: "artifacts/:sessionId/:artifactId", element: <ArtifactDetailPage /> },
-      { path: "code", element: <PlaceholderPage /> },
+      { path: "widgets", element: <WidgetsPage /> },
+      { path: "widgets/:sessionId/:widgetId", element: <WidgetDetailPage /> },
+      { path: "code", element: <Navigate to="/widgets" replace /> },
       { path: "chat/:id", element: <ChatView /> },
       {
         path: "settings",

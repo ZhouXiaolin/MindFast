@@ -8,6 +8,7 @@ const pathToLabel: Record<string, string> = {
   projects: "projects",
   artifacts: "artifacts",
   code: "code",
+  widgets: "widgets",
 };
 
 export function PlaceholderPage() {
