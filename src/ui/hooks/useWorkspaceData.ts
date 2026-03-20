@@ -87,10 +87,20 @@ export function useSavedArtifacts() {
           return [...messageArtifacts, ...subtaskArtifacts];
         });
 
-        allArtifacts.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+        const dedupedArtifacts = new Map<string, SavedArtifactSummary>();
+        for (const artifact of allArtifacts) {
+          const dedupeKey = `${artifact.sessionId}:${artifact.filename}`;
+          const existing = dedupedArtifacts.get(dedupeKey);
+          if (!existing || artifact.updatedAt > existing.updatedAt) {
+            dedupedArtifacts.set(dedupeKey, artifact);
+          }
+        }
+
+        const finalArtifacts = Array.from(dedupedArtifacts.values());
+        finalArtifacts.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
 
         if (!cancelled) {
-          setArtifacts(allArtifacts);
+          setArtifacts(finalArtifacts);
         }
       } catch (error) {
         console.error("Failed to load artifacts:", error);

@@ -64,15 +64,14 @@ export function InlineArtifactPreview({ filename, content, growWithContent = fal
   }
 
   if (fileType === "html") {
-    const containerStyle = growWithContent
-      ? { height: iframeHeight }
-      : { minHeight: 200, maxHeight };
+    const containerStyle = { height: iframeHeight };
     return (
       <div className={boxClass} style={containerStyle}>
         <SandboxedIframe
           htmlContent={resolvedContent}
           className="w-full h-full border-0 bg-white rounded-b-xl"
-          onHeightChange={growWithContent ? setIframeHeight : undefined}
+          continuousHeightUpdates={growWithContent}
+          onHeightChange={setIframeHeight}
         />
       </div>
     );

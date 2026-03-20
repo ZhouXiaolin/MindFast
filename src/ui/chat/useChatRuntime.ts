@@ -10,6 +10,7 @@ import { getDefaultModel } from "../../ai/agent";
 interface ChatRuntimeState {
   agent: Agent | null;
   currentModel: Model<any> | null;
+  sessionReady: boolean;
   thinkingLevel: ThinkingLevel;
   messages: AgentMessage[];
   streamMessage: AgentMessage | null;
@@ -19,7 +20,6 @@ interface ChatRuntimeState {
 
 interface UseChatRuntimeResult extends ChatRuntimeState {
   isHydratingRef: React.MutableRefObject<boolean>;
-  isSessionReady: () => boolean;
   syncAgentState: (
     nextAgent: Agent,
     store?: WorkspaceStore | null,
@@ -37,6 +37,7 @@ function cloneStreamMessage(message: AgentMessage | null): AgentMessage | null {
 const INITIAL_RUNTIME_STATE: ChatRuntimeState = {
   agent: null,
   currentModel: null,
+  sessionReady: false,
   thinkingLevel: "off",
   messages: [],
   streamMessage: null,
@@ -115,6 +116,7 @@ export function useChatRuntime(sessionId: string): UseChatRuntimeResult {
     const hydrateSession = async () => {
       try {
         isHydratingRef.current = true;
+        setRuntimeState((state) => ({ ...state, sessionReady: false }));
         const storage = await getInitializedAppStorage();
         const savedSession = await storage.sessions.loadSession(sessionId);
 
@@ -143,6 +145,9 @@ export function useChatRuntime(sessionId: string): UseChatRuntimeResult {
 
         hydratedSessionRef.current = sessionId;
         syncAgentState(agent, undefined, { reconstructWorkspace: true });
+        if (!cancelled) {
+          setRuntimeState((state) => ({ ...state, sessionReady: true }));
+        }
       } catch (error) {
         console.error("Failed to hydrate chat session:", error);
       } finally {
@@ -157,14 +162,9 @@ export function useChatRuntime(sessionId: string): UseChatRuntimeResult {
     };
   }, [runtimeState.agent, sessionId, syncAgentState]);
 
-  const isSessionReady = useCallback(() => {
-    return hydratedSessionRef.current === sessionId && !isHydratingRef.current;
-  }, [sessionId]);
-
   return {
     ...runtimeState,
     isHydratingRef,
-    isSessionReady,
     syncAgentState,
   };
 }

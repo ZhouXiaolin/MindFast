@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { ToolResultMessage } from "@mariozechner/pi-ai";
 import { MessageList } from "./MessageList";
 import { StreamingMessageContainer } from "./StreamingMessageContainer";
@@ -17,9 +18,17 @@ import { useSubagentPanel } from "./useSubagentPanel";
 import { ChatSubagentsPanel } from "./ChatSubagentsPanel";
 import { SubagentToolProvider } from "./tools";
 import { useSubtaskRuns } from "./useSubtaskRuns";
-import { LivePreviewProvider, useLivePreviewEntries } from "./LivePreviewContext";
-import { isArtifactPath } from "../../ai/workspace-types";
-import type { WorkspaceFile } from "../../ai/workspace/types";
+import {
+  LivePreviewProvider,
+  useLivePreviewEntries,
+  type LivePreviewEntry,
+} from "./LivePreviewContext";
+import { isArtifactPath, normalizeWorkspacePath } from "../../ai/workspace-types";
+import type { WorkspaceFile, WorkspaceFileMessage } from "../../ai/workspace/types";
+import {
+  extractSubtasksFromToolCall,
+  type SubtaskWithResult,
+} from "../../ai/subagent-types";
 interface ChatUIProps {
   sessionId: string;
 }
@@ -31,6 +40,75 @@ const CHAT_FONT_CLASS: Record<import("../../stores/app").ChatFont, string> = {
   dyslexic: "font-chat-dyslexic",
 };
 
+function addArtifactPanelItem(
+  itemsByPath: Map<string, ArtifactPanelItem>,
+  artifact: WorkspaceFile,
+  id: string,
+  label: string
+) {
+  const normalizedPath = normalizeWorkspacePath(artifact.filename);
+  if (!isArtifactPath(normalizedPath) || itemsByPath.has(normalizedPath)) {
+    return;
+  }
+
+  itemsByPath.set(normalizedPath, {
+    id,
+    artifact: { ...artifact, filename: normalizedPath },
+    label,
+  });
+}
+
+function buildArtifactPanelItems({
+  committedArtifacts,
+  livePreviewEntries,
+  subtaskTasks,
+}: {
+  committedArtifacts: WorkspaceFile[];
+  livePreviewEntries: Map<string, LivePreviewEntry>;
+  subtaskTasks: SubtaskWithResult[];
+}): ArtifactPanelItem[] {
+  const itemsByPath = new Map<string, ArtifactPanelItem>();
+
+  for (const artifact of committedArtifacts) {
+    addArtifactPanelItem(
+      itemsByPath,
+      artifact,
+      `main:${artifact.id}`,
+      normalizeWorkspacePath(artifact.filename)
+    );
+  }
+
+  for (const entry of livePreviewEntries.values()) {
+    const normalizedPath = normalizeWorkspacePath(entry.path);
+    addArtifactPanelItem(
+      itemsByPath,
+      {
+        id: `live:${entry.toolCallId}:${normalizedPath}`,
+        filename: normalizedPath,
+        content: entry.canRenderContent ? entry.content ?? "" : "",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      `live:${entry.toolCallId}:${normalizedPath}`,
+      normalizedPath
+    );
+  }
+
+  for (const task of subtaskTasks) {
+    for (const [index, artifact] of (task.run?.files ?? []).entries()) {
+      const normalizedPath = normalizeWorkspacePath(artifact.filename);
+      addArtifactPanelItem(
+        itemsByPath,
+        artifact,
+        `subtask:${artifact.id ?? `${task.runKey}:${normalizedPath}:${index}`}`,
+        `${normalizedPath} · ${task.label}`
+      );
+    }
+  }
+
+  return Array.from(itemsByPath.values());
+}
+
 export function ChatUI({ sessionId }: ChatUIProps) {
   const touchWorkspaceRevision = useAppStore((state) => state.touchWorkspaceRevision);
   const chatFont = useAppStore((state) => state.chatFont);
@@ -41,10 +119,10 @@ export function ChatUI({ sessionId }: ChatUIProps) {
   const autoScrollRef = useRef(true);
   const {
     agent,
+    sessionReady,
     workspaceFiles,
     currentModel,
     isHydratingRef,
-    isSessionReady,
     isStreaming,
     messages,
     streamMessage,
@@ -83,67 +161,112 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     selectedTask,
     closePanel: closeSubagentPanel,
     selectTask: selectSubagentTask,
-  } = useSubagentPanel(subagentTasks);
+  } = useSubagentPanel(subagentTasks, {
+    autoOpenEnabled: sessionReady,
+    resetKey: sessionId,
+  });
 
-  const artifactItems = useMemo<ArtifactPanelItem[]>(() => {
-    const panelItems: ArtifactPanelItem[] = workspaceFiles
-      .filter((artifact) => isArtifactPath(artifact.filename))
-      .map((artifact) => ({
-        id: `main:${artifact.id}`,
-        artifact,
-        kind: "main",
-        label: artifact.filename,
-      }));
+  const currentTurnMessages = useMemo<AgentMessage[]>(() => {
+    for (let index = messages.length - 1; index >= 0; index -= 1) {
+      const role = (messages[index] as { role?: string }).role;
+      if (role === "user" || role === "user-with-attachments") {
+        return messages.slice(index + 1);
+      }
+    }
+    return messages;
+  }, [messages]);
 
-    const existingPaths = new Set(panelItems.map((item) => item.artifact.filename));
-    for (const entry of livePreviewEntries.values()) {
-      if (!isArtifactPath(entry.path) || existingPaths.has(entry.path)) {
+  const currentTurnSubagentToolCallIds = useMemo(() => {
+    const ids = new Set<string>();
+
+    for (const message of currentTurnMessages) {
+      if (message.role !== "assistant") {
         continue;
       }
 
-      const livePreviewFile: WorkspaceFile = {
-        id: `live:${entry.toolCallId}:${entry.path}`,
-        filename: entry.path,
-        content: entry.canRenderContent ? entry.content ?? "" : "",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      panelItems.push({
-        id: `live:${entry.toolCallId}:${entry.path}`,
-        artifact: livePreviewFile,
-        kind: "main",
-        label: entry.path,
-      });
-    }
-
-    for (const task of subagentTasks) {
-      for (const [index, artifact] of (task.run?.files ?? []).entries()) {
-        if (!isArtifactPath(artifact.filename)) {
+      const content = (message as { content?: Array<{ type?: string; id?: string; name?: string; arguments?: unknown }> }).content ?? [];
+      for (const chunk of content) {
+        if (chunk.type !== "toolCall" || !chunk.id || !chunk.name) {
           continue;
         }
-        panelItems.push({
-          id: `subtask:${artifact.id ?? `${task.runKey}:${artifact.filename}:${index}`}`,
-          artifact,
-          kind: "subtask",
-          label: `${artifact.filename} · ${task.label}`,
-        });
+        if (extractSubtasksFromToolCall(chunk.name, chunk.arguments)) {
+          ids.add(chunk.id);
+        }
       }
     }
 
-    return panelItems;
-  }, [livePreviewEntries, workspaceFiles, subagentTasks]);
+    return ids;
+  }, [currentTurnMessages]);
+
+  const currentTurnSubagentTasks = useMemo(
+    () => subagentTasks.filter((task) => currentTurnSubagentToolCallIds.has(task.toolCallId)),
+    [currentTurnSubagentToolCallIds, subagentTasks]
+  );
+
+  const currentTurnArtifacts = useMemo<WorkspaceFile[]>(() => {
+    const artifactsByPath = new Map<string, WorkspaceFile>();
+
+    for (const message of currentTurnMessages) {
+      if ((message as { role?: string }).role !== "workspaceFile") {
+        continue;
+      }
+
+      const workspaceFileMessage = message as WorkspaceFileMessage;
+      const normalizedPath = normalizeWorkspacePath(workspaceFileMessage.filename);
+      if (!isArtifactPath(normalizedPath)) {
+        continue;
+      }
+
+      if (workspaceFileMessage.action === "delete") {
+        artifactsByPath.delete(normalizedPath);
+        continue;
+      }
+
+      if (workspaceFileMessage.content === undefined) {
+        continue;
+      }
+
+      artifactsByPath.set(normalizedPath, {
+        id: `current:${workspaceFileMessage.timestamp}:${normalizedPath}`,
+        filename: normalizedPath,
+        content: workspaceFileMessage.content,
+        createdAt: new Date(workspaceFileMessage.timestamp),
+        updatedAt: new Date(workspaceFileMessage.timestamp),
+      });
+    }
+
+    return Array.from(artifactsByPath.values());
+  }, [currentTurnMessages]);
+
+  const allArtifactItems = useMemo<ArtifactPanelItem[]>(() => {
+    return buildArtifactPanelItems({
+      committedArtifacts: workspaceFiles,
+      livePreviewEntries,
+      subtaskTasks: subagentTasks,
+    });
+  }, [livePreviewEntries, subagentTasks, workspaceFiles]);
+
+  const artifactItems = useMemo<ArtifactPanelItem[]>(() => {
+    return buildArtifactPanelItems({
+      committedArtifacts: currentTurnArtifacts,
+      livePreviewEntries,
+      subtaskTasks: currentTurnSubagentTasks,
+    });
+  }, [currentTurnArtifacts, currentTurnSubagentTasks, livePreviewEntries]);
 
   const {
     hasArtifacts,
     openArtifact,
-    openPanel,
     closePanel,
     selectedArtifact,
     selectedArtifactId,
     selectArtifact,
     showArtifactsPanel,
-  } = useArtifactsPanel(artifactItems);
+    visibleArtifactsList,
+  } = useArtifactsPanel(artifactItems, allArtifactItems, {
+    autoOpenEnabled: sessionReady,
+    resetKey: sessionId,
+  });
 
   const scrollToBottom = useCallback(() => {
     if (!autoScrollRef.current) return;
@@ -176,7 +299,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     async (text: string) => {
       const t = text.trim();
       if (!t || !agent || isStreaming) return;
-      if (!isSessionReady()) return;
+      if (!sessionReady) return;
       setInput("");
       autoScrollRef.current = true;
       try {
@@ -185,14 +308,14 @@ export function ChatUI({ sessionId }: ChatUIProps) {
         console.error(err);
       }
     },
-    [agent, isSessionReady, isStreaming]
+    [agent, isStreaming, sessionReady]
   );
 
   const handleEditUserMessage = useCallback(
     async (messageIndex: number, newContent: string) => {
       const t = newContent.trim();
       if (!t || !agent || isStreaming) return;
-      if (!isSessionReady()) return;
+      if (!sessionReady) return;
 
       autoScrollRef.current = true;
       setInput("");
@@ -206,14 +329,14 @@ export function ChatUI({ sessionId }: ChatUIProps) {
         console.error(error);
       }
     },
-    [agent, isSessionReady, isStreaming, messages, syncAgentState]
+    [agent, isStreaming, messages, sessionReady, syncAgentState]
   );
 
   const handleRetryUserMessage = useCallback(
     async (messageIndex: number, text: string) => {
       const t = text.trim();
       if (!t || !agent || isStreaming) return;
-      if (!isSessionReady()) return;
+      if (!sessionReady) return;
 
       autoScrollRef.current = true;
       setInput("");
@@ -227,7 +350,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
         console.error(error);
       }
     },
-    [agent, isSessionReady, isStreaming, messages, syncAgentState]
+    [agent, isStreaming, messages, sessionReady, syncAgentState]
   );
 
   // 收集所有工具结果
@@ -382,12 +505,11 @@ export function ChatUI({ sessionId }: ChatUIProps) {
 
       {hasArtifacts && !showSubagentsPanel ? (
         <ChatArtifactsPanel
-          artifactsList={artifactItems}
+          artifactsList={visibleArtifactsList}
           selectedArtifact={selectedArtifact}
           selectedArtifactId={selectedArtifactId}
           showArtifactsPanel={showArtifactsPanel}
           onClosePanel={closePanel}
-          onOpenPanel={openPanel}
           onSelectArtifact={selectArtifact}
         />
       ) : null}

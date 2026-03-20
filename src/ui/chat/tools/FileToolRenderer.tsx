@@ -63,7 +63,7 @@ function ToolHeader({
         {label}
       </span>
       {path && isArtifactPath(path) ? (
-        <ArtifactPill filename={path} onOpen={onOpenArtifact} />
+        <ArtifactPill filename={path} onOpen={onOpenArtifact} interactive={!shouldOpenArtifact} />
       ) : path ? (
         <span className="rounded-full border border-sidebar-soft bg-sidebar-panel px-2 py-0.5 text-xs text-sidebar-muted">
           {path}
@@ -169,7 +169,7 @@ export function renderFileTool(
   const body = isWidgetPath(path ?? "") && finalContent !== undefined ? (
     <div className="overflow-hidden rounded-2xl border border-sidebar-soft bg-sidebar-panel">
       <div className="p-2">
-        <InlineArtifactPreview filename={path ?? "widget.txt"} content={finalContent} growWithContent />
+        <InlineArtifactPreview filename={path ?? "widget.txt"} content={finalContent} />
       </div>
     </div>
   ) : isArtifactPath(path ?? "") ? null : toolName === "edit" && params ? (

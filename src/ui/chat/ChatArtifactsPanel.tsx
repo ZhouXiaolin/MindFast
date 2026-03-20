@@ -8,7 +8,6 @@ interface ChatArtifactsPanelProps {
   selectedArtifactId: string | null;
   showArtifactsPanel: boolean;
   onClosePanel: () => void;
-  onOpenPanel: () => void;
   onSelectArtifact: (artifactId: string) => void;
 }
 
@@ -18,7 +17,6 @@ export function ChatArtifactsPanel({
   selectedArtifactId,
   showArtifactsPanel,
   onClosePanel,
-  onOpenPanel,
   onSelectArtifact,
 }: ChatArtifactsPanelProps) {
   if (artifactsList.length === 0) {
@@ -77,17 +75,6 @@ export function ChatArtifactsPanel({
           ) : null}
         </div>
       </div>
-
-      {!showArtifactsPanel ? (
-        <button
-          type="button"
-          onClick={onOpenPanel}
-          className="absolute left-1/2 top-4 z-30 -translate-x-1/2 rounded-full border border-sidebar-soft bg-sidebar-panel px-3 py-1.5 text-xs text-sidebar shadow-lg transition-colors hover:bg-sidebar-panel-strong"
-          title="Show artifacts"
-        >
-          Artifacts ({artifactsList.length})
-        </button>
-      ) : null}
     </>
   );
 }

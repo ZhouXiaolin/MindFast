@@ -4,8 +4,12 @@ import type { WorkspaceFile } from "../../ai/workspace/types";
 export interface ArtifactPanelItem {
   id: string;
   artifact: WorkspaceFile;
-  kind: "main" | "subtask";
   label: string;
+}
+
+interface UseArtifactsPanelOptions {
+  autoOpenEnabled?: boolean;
+  resetKey?: string;
 }
 
 interface UseArtifactsPanelResult {
@@ -18,36 +22,61 @@ interface UseArtifactsPanelResult {
   selectedArtifactId: string | null;
   selectArtifact: (artifactId: string) => void;
   showArtifactsPanel: boolean;
+  visibleArtifactsList: ArtifactPanelItem[];
 }
 
-export function useArtifactsPanel(artifactsList: ArtifactPanelItem[]): UseArtifactsPanelResult {
+export function useArtifactsPanel(
+  defaultArtifactsList: ArtifactPanelItem[],
+  lookupArtifactsList: ArtifactPanelItem[] = defaultArtifactsList,
+  options: UseArtifactsPanelOptions = {}
+): UseArtifactsPanelResult {
+  const { autoOpenEnabled = true, resetKey } = options;
   const [activeArtifact, setActiveArtifact] = useState<string | null>(null);
-  const [showArtifactsPanel, setShowArtifactsPanel] = useState(true);
+  const [focusedFilename, setFocusedFilename] = useState<string | null>(null);
+  const [showArtifactsPanel, setShowArtifactsPanel] = useState(false);
   const prevArtifactCountRef = useRef(0);
+  const hasInitializedRef = useRef(false);
 
-  const fallbackArtifact = artifactsList[artifactsList.length - 1] ?? null;
+  useEffect(() => {
+    hasInitializedRef.current = false;
+    prevArtifactCountRef.current = 0;
+    setActiveArtifact(null);
+    setFocusedFilename(null);
+    setShowArtifactsPanel(false);
+  }, [resetKey]);
+
+  const visibleArtifactsList = focusedFilename
+    ? lookupArtifactsList.filter((artifact) => {
+        return artifact.artifact.filename === focusedFilename;
+      })
+    : defaultArtifactsList;
+
+  const fallbackArtifact = visibleArtifactsList[visibleArtifactsList.length - 1] ?? null;
   const activeArtifactExists = !!activeArtifact &&
-    artifactsList.some((artifact) => artifact.id === activeArtifact);
+    visibleArtifactsList.some((artifact) => artifact.id === activeArtifact);
   const selectedArtifactId = activeArtifactExists
     ? activeArtifact
     : fallbackArtifact?.id ?? null;
 
   const openArtifact = useCallback((filename: string) => {
-    const mainMatch = artifactsList.find(
-      (artifact) => artifact.kind === "main" && artifact.artifact.filename === filename
-    );
-    const fallbackMatch = artifactsList.find(
+    const matchedArtifact = lookupArtifactsList.find(
       (artifact) => artifact.artifact.filename === filename
     );
-    setActiveArtifact(mainMatch?.id ?? fallbackMatch?.id ?? null);
+    const nextArtifactId = matchedArtifact?.id ?? null;
+    if (!nextArtifactId) {
+      return;
+    }
+    setFocusedFilename(filename);
+    setActiveArtifact(nextArtifactId);
     setShowArtifactsPanel(true);
-  }, [artifactsList]);
+  }, [lookupArtifactsList]);
 
   const selectArtifact = useCallback((artifactId: string) => {
     setActiveArtifact(artifactId);
   }, []);
 
   const openPanel = useCallback(() => {
+    setFocusedFilename(null);
     setShowArtifactsPanel(true);
   }, []);
 
@@ -56,30 +85,47 @@ export function useArtifactsPanel(artifactsList: ArtifactPanelItem[]): UseArtifa
   }, []);
 
   const selectedArtifact = selectedArtifactId
-    ? artifactsList.find((artifact) => artifact.id === selectedArtifactId)?.artifact ?? null
+    ? visibleArtifactsList.find((artifact) => artifact.id === selectedArtifactId)?.artifact ?? null
     : null;
 
   useEffect(() => {
-    const nextCount = artifactsList.length;
-    const prevCount = prevArtifactCountRef.current;
+    const nextCount = visibleArtifactsList.length;
 
-    if (nextCount > prevCount && fallbackArtifact) {
+    if (!autoOpenEnabled) {
+      prevArtifactCountRef.current = nextCount;
+      return;
+    }
+
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      prevArtifactCountRef.current = nextCount;
+      return;
+    }
+
+    if (nextCount > prevArtifactCountRef.current && fallbackArtifact) {
       setActiveArtifact(fallbackArtifact.id);
       setShowArtifactsPanel(true);
     }
 
     prevArtifactCountRef.current = nextCount;
-  }, [artifactsList, fallbackArtifact]);
+  }, [autoOpenEnabled, fallbackArtifact, visibleArtifactsList]);
+
+  useEffect(() => {
+    if (focusedFilename && visibleArtifactsList.length === 0) {
+      setFocusedFilename(null);
+    }
+  }, [focusedFilename, visibleArtifactsList]);
 
   return {
     activeArtifact: selectedArtifactId,
     closePanel,
-    hasArtifacts: artifactsList.length > 0,
+    hasArtifacts: visibleArtifactsList.length > 0 || defaultArtifactsList.length > 0,
     openArtifact,
     openPanel,
     selectedArtifact,
     selectedArtifactId,
     selectArtifact,
     showArtifactsPanel,
+    visibleArtifactsList,
   };
 }

@@ -121,72 +121,59 @@ export function ChatSubagentsPanel({
   if (tasks.length === 0) return null;
 
   return (
-    <>
-      <div
-        className={cn(
-          "min-h-0 border-l border-sidebar-soft bg-sidebar-panel backdrop-blur-sm",
-          showPanel ? "flex w-[min(44rem,48vw)] shrink-0 flex-col" : "hidden"
-        )}
-        style={{ minHeight: 0 }}
-      >
-        <div className="flex shrink-0 items-center justify-between border-b border-sidebar-soft px-4 py-3">
-          <div className="flex items-center gap-2">
-            <GitBranch className="h-4 w-4 text-sidebar-muted" />
-            <div>
-              <div className="text-sm font-medium text-sidebar">Subtasks</div>
-              <div className="mt-0.5 text-xs text-sidebar-muted">
-                {tasks.filter((t) => t.status === "completed").length}/{tasks.length} completed
-              </div>
+    <div
+      className={cn(
+        "min-h-0 border-l border-sidebar-soft bg-sidebar-panel backdrop-blur-sm",
+        showPanel ? "flex w-[min(44rem,48vw)] shrink-0 flex-col" : "hidden"
+      )}
+      style={{ minHeight: 0 }}
+    >
+      <div className="flex shrink-0 items-center justify-between border-b border-sidebar-soft px-4 py-3">
+        <div className="flex items-center gap-2">
+          <GitBranch className="h-4 w-4 text-sidebar-muted" />
+          <div>
+            <div className="text-sm font-medium text-sidebar">Subtasks</div>
+            <div className="mt-0.5 text-xs text-sidebar-muted">
+              {tasks.filter((t) => t.status === "completed").length}/{tasks.length} completed
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClosePanel}
-            className="rounded-full p-2 text-sidebar-muted transition-colors hover:bg-sidebar-panel-strong hover:text-sidebar"
-            aria-label="Close subtasks"
-          >
-            ×
-          </button>
         </div>
-
-        <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-sidebar-soft px-4 py-3">
-          {tasks.map((task) => (
-            <button
-              key={task.runKey}
-              type="button"
-              onClick={() => onSelectTask(task.runKey)}
-              className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs whitespace-nowrap transition-colors",
-                selectedTaskId === task.runKey
-                  ? "border-accent/30 bg-accent/10 text-sidebar"
-                  : "border-sidebar-soft bg-sidebar-panel text-sidebar-muted hover:bg-sidebar-panel-strong hover:text-sidebar"
-              )}
-            >
-              <StatusBadge status={task.status} />
-              <span>{task.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {selectedTask ? (
-          <SubtaskRunView task={selectedTask} tools={tools} />
-        ) : (
-          <div className="flex flex-1 items-center justify-center text-sm text-sidebar-muted">
-            Select a subtask to view details
-          </div>
-        )}
-      </div>
-
-      {!showPanel && tasks.length > 0 ? (
         <button
           type="button"
-          onClick={() => onSelectTask(tasks[0].runKey)}
-          className="absolute left-1/2 top-4 z-30 -translate-x-1/2 rounded-full border border-sidebar-soft bg-sidebar-panel px-3 py-1.5 text-xs text-sidebar shadow-lg transition-colors hover:bg-sidebar-panel-strong"
-          title="Show subtasks"
+          onClick={onClosePanel}
+          className="rounded-full p-2 text-sidebar-muted transition-colors hover:bg-sidebar-panel-strong hover:text-sidebar"
+          aria-label="Close subtasks"
         >
-          Subtasks ({tasks.length})
+          ×
         </button>
-      ) : null}
-    </>
+      </div>
+
+      <div className="flex shrink-0 gap-2 overflow-x-auto border-b border-sidebar-soft px-4 py-3">
+        {tasks.map((task) => (
+          <button
+            key={task.runKey}
+            type="button"
+            onClick={() => onSelectTask(task.runKey)}
+            className={cn(
+              "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs whitespace-nowrap transition-colors",
+              selectedTaskId === task.runKey
+                ? "border-accent/30 bg-accent/10 text-sidebar"
+                : "border-sidebar-soft bg-sidebar-panel text-sidebar-muted hover:bg-sidebar-panel-strong hover:text-sidebar"
+            )}
+          >
+            <StatusBadge status={task.status} />
+            <span>{task.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {selectedTask ? (
+        <SubtaskRunView task={selectedTask} tools={tools} />
+      ) : (
+        <div className="flex flex-1 items-center justify-center text-sm text-sidebar-muted">
+          Select a subtask to view details
+        </div>
+      )}
+    </div>
   );
 }

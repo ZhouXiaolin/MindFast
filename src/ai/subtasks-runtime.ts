@@ -1,5 +1,6 @@
 import type { SubtaskRun } from "./subagent-types";
 import type { SubtaskRunsStore } from "../stores/storage/stores/subtask-runs-store";
+import { normalizeWorkspacePath } from "./workspace-types";
 
 type Listener = () => void;
 
@@ -36,10 +37,14 @@ function getRunsSignature(runs: Record<string, SubtaskRun>): string {
 function normalizeRun(runKey: string, run: SubtaskRun): SubtaskRun {
 	return {
 		...run,
-		files: run.files.map((file, index) => ({
-			...file,
-			id: file.id ?? `subtask:${runKey}:${index}:${file.filename}`,
-		})),
+		files: run.files.map((file, index) => {
+			const normalizedFilename = normalizeWorkspacePath(file.filename);
+			return {
+				...file,
+				filename: normalizedFilename,
+				id: file.id ?? `subtask:${runKey}:${index}:${normalizedFilename}`,
+			};
+		}),
 	};
 }
 

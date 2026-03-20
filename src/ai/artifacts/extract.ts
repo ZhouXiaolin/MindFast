@@ -1,6 +1,6 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { SubtaskRun } from "../subagent-types";
-import { isArtifactPath } from "../workspace-types";
+import { isArtifactPath, normalizeWorkspacePath } from "../workspace-types";
 import { WorkspaceStore } from "../workspace/store";
 
 export type WorkspaceArtifactKind = "html" | "markdown" | "text";
@@ -44,13 +44,14 @@ function toSavedArtifactSummary(
   filename: string,
   content: string
 ): SavedArtifactSummary {
+  const normalizedFilename = normalizeWorkspacePath(filename);
   return {
     artifactId,
     sessionId,
     sessionTitle,
-    filename,
+    filename: normalizedFilename,
     content,
-    kind: getArtifactKind(filename),
+    kind: getArtifactKind(normalizedFilename),
     updatedAt,
     previewText: buildArtifactPreviewText(content),
   };

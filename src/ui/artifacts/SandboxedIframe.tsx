@@ -10,12 +10,13 @@ export interface SandboxConsoleEntry {
 interface SandboxedIframeProps {
   htmlContent: string;
   className?: string;
+  continuousHeightUpdates?: boolean;
   onConsoleMessage?: (entry: SandboxConsoleEntry) => void;
   onRuntimeError?: (message: string | null) => void;
   onHeightChange?: (height: number) => void;
 }
 
-function getRuntimeScript(sandboxId: string): string {
+function getRuntimeScript(sandboxId: string, continuousHeightUpdates: boolean): string {
   return `<style>
 html, body {
   font-size: initial;
@@ -23,6 +24,7 @@ html, body {
 </style>
 <script>
 window.__mindfastSandboxId = ${JSON.stringify(sandboxId)};
+window.__mindfastContinuousHeightUpdates = ${JSON.stringify(continuousHeightUpdates)};
 
 (function() {
   ${morphdomSource}
@@ -119,9 +121,14 @@ window.__mindfastSandboxId = ${JSON.stringify(sandboxId)};
 
   window.addEventListener("load", function() {
     setTimeout(reportHeight, 50);
-    try {
-      new ResizeObserver(function() { reportHeight(); }).observe(document.documentElement);
-    } catch(e) {}
+    setTimeout(reportHeight, 150);
+    setTimeout(reportHeight, 400);
+    setTimeout(reportHeight, 1000);
+    if (window.__mindfastContinuousHeightUpdates) {
+      try {
+        new ResizeObserver(function() { reportHeight(); }).observe(document.documentElement);
+      } catch(e) {}
+    }
     post({ type: "iframe-ready" });
   });
 
@@ -144,8 +151,12 @@ window.__mindfastSandboxId = ${JSON.stringify(sandboxId)};
 </script>`;
 }
 
-function prepareHtmlDocument(sandboxId: string, htmlContent: string): string {
-  const runtime = getRuntimeScript(sandboxId);
+function prepareHtmlDocument(
+  sandboxId: string,
+  htmlContent: string,
+  continuousHeightUpdates: boolean
+): string {
+  const runtime = getRuntimeScript(sandboxId, continuousHeightUpdates);
 
   const headMatch = htmlContent.match(/<head[^>]*>/i);
   if (headMatch) {
@@ -167,6 +178,7 @@ const DEBOUNCE_MS = 300;
 export function SandboxedIframe({
   htmlContent,
   className,
+  continuousHeightUpdates = false,
   onConsoleMessage,
   onRuntimeError,
   onHeightChange,
@@ -177,7 +189,7 @@ export function SandboxedIframe({
   // Freeze the initial srcDoc – never change it after first render.
   const initialSrcDocRef = useRef<string | null>(null);
   if (initialSrcDocRef.current === null) {
-    initialSrcDocRef.current = prepareHtmlDocument(sandboxId, htmlContent);
+    initialSrcDocRef.current = prepareHtmlDocument(sandboxId, htmlContent, continuousHeightUpdates);
   }
 
   // Track whether the iframe has signalled it is ready to receive postMessages.
