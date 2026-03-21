@@ -1,0 +1,79 @@
+<div align="center">
+
+# MindFast
+
+如今的 Agent CLI 发展如火如荼，各种工具层出不穷，使人头晕目眩。  
+有人说CLI是未来？
+
+[English](README.md) | [中文](README_ZH.md)
+</div>
+## 设计哲学
+
+### 一切都是文件
+
+这是 MindFast 最核心的设计原则。
+
+一般来说，实现 Widget 或 Artifact，通常需要为 Agent 定制专用工具——告诉它如何创建卡片、如何渲染图表、如何更新状态。但在 MindFast 中，我并没有这样做。
+
+一个完备的 Agent 系统，理论上只需要四个工具：**Read、Write、Edit、Bash**（甚至只需要 Bash）。额外的工具定义不仅增加了系统的复杂度，也限制了 Agent 的自由度。与其为每种 UI 元素设计一套专属协议，不如让 Agent 用它最擅长的方式工作——操作文件。
+
+因此，MindFast 采用了基于目录约定的方案：
+
+- 写入 `widgets/` 目录下的文件，渲染为对话流中的小组件
+- 写入 `artifacts/` 目录下的文件，渲染为侧边栏中的资源
+- 写入 `plans/` 目录下的文件，作为当前对话的计划追踪
+
+Agent 不需要学习任何新的工具调用方式，只需要知道"往哪个目录写文件"。生成 Widget 或 Artifact 的规则，可以写在 System Prompt 中，也可以写成 Guideline 按需加载。
+
+这个设计的好处是显而易见的：计划列表的每一步完成时，只需 Edit 对应文件中的对应行；要展示一张数据图表，只需往 `widgets/` 写入一个 HTML 文件。Agent 始终在做它最擅长的事——读写文件。
+
+### 虚拟文件系统
+
+在当前的 Web 环境中，MindFast 使用 IndexedDB 模拟了完整的文件创建与读写能力，并在 Bash 工具中实现了若干常用命令的模拟。这套虚拟文件系统的存在，不仅仅是为了支撑上述四个核心工具，更是为将来通过 Tauri 对接真实的 Shell 环境铺路。届时，从浏览器沙盒到本地系统的切换将是平滑的，上层逻辑无需改动。
+
+## 特色功能
+
+### Widget 小组件
+
+直接嵌入对话流中的交互式组件。Agent 生成的可视化内容——图表、表单、代码预览、计划看板——不再被隔离在单独的面板里，而是出现在它该出现的地方：对话的上下文中。
+
+### Artifact 资源面板
+
+显示在侧边栏的持久化资源。适合承载较大的内容产物，如完整的代码文件、长文档、多步骤方案等。与 Widget 不同，Artifact 独立于对话流存在，便于随时查阅和对比。
+
+### Guideline 指南系统
+
+可按需加载的规则与约定。不必将所有指令塞进 System Prompt，而是将不同场景的规则拆分为独立的 Guideline 文件，Agent 在需要时自行加载。这既减轻了上下文负担，也让规则的维护更加清晰。
+
+### Plan
+对于复杂任务，我们可以生成计划，来一步步跟踪完成进度。
+
+### SubAgent 子代理
+
+通过 Bash 命令派生的子代理。本质上，SubAgent 仍然是一个完整的 Agent Loop——接收指令、调用工具、返回结果。在当前实现中，主 Agent 通过 Bash 工具发起子代理调用，子代理在独立的上下文中执行任务，完成后将结果交还主 Agent。
+
+这套机制的意义在于：复杂任务可以被拆解为多个子任务并行处理，而不必挤在同一个对话上下文里。至于更进一步的 Agent 编排、依赖管理和跨 Agent 通信，那是后续要解决的问题，当前先把单层派生跑通。
+
+## 技术路线
+
+MindFast 当前以纯 Web 应用的形式运行，后续计划通过 Tauri 封装为桌面客户端，届时将具备：
+
+- 真实的本地文件系统访问
+- 原生 Shell 命令执行
+- MCP
+- Skills
+- Agent通信
+
+从虚拟到真实，架构上的过渡已经预埋完毕。
+
+## 贡献
+
+欢迎提交 Issue 反馈问题和建议！
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/image?repos=ZhouXiaolin/MindFast&type=date&legend=top-left)](https://www.star-history.com/?repos=ZhouXiaolin%2FMindFast&type=date&legend=top-left)
+
+## License
+
+MIT © Solaren Zhou
