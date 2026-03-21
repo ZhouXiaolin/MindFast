@@ -18,6 +18,9 @@ concurrency:
 jobs:
   release:
     runs-on: ${{ matrix.os }}
+    # Vite 打包大项目时 Node 默认 ~2GB 堆易 OOM（beforeBuildCommand 会调起 node）
+    env:
+      NODE_OPTIONS: --max-old-space-size=6144
     strategy:
       fail-fast: false
       matrix:
