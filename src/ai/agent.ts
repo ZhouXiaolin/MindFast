@@ -50,7 +50,12 @@ Use Tasks to break down complex work into trackable steps and maintain execution
 ## Behavior
 
 - Do not create files for greetings, Q&A, explanations, or conversational replies unless the user explicitly asks for a file, artifact, or widget.
-- Put explanations in assistant text, not inside generated files.`.trim();
+- Put explanations in assistant text, not inside generated files.
+
+## Math Formulas
+
+- Inline formulas: use \`$ ... $\` (e.g., \`$E = mc^2$\` renders as $E = mc^2$)
+- Display formulas: use \`$$ ... $$\` on separate lines for centered block equations`.trim();
 
 /**
  * Provider base URLs for custom providers using openai-completions API

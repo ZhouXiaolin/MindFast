@@ -118,6 +118,7 @@ function buildArtifactPanelItems({
 export function ChatUI({ sessionId }: ChatUIProps) {
   const touchWorkspaceRevision = useAppStore((state) => state.touchWorkspaceRevision);
   const chatFont = useAppStore((state) => state.chatFont);
+  const sidebarOpen = useAppStore((state) => state.sidebarOpen);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const composerTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -514,7 +515,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
           </div>
         ) : null}
 
-        {showPlanPanel && planData ? (
+        {showPlanPanel && planData && !(sidebarOpen && showArtifactsPanel) ? (
           <ChatPlanPanel planData={planData} />
         ) : null}
       </div>
