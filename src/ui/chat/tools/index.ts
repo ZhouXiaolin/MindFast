@@ -36,7 +36,7 @@ registerToolRenderer("write", {
     isStreaming?: boolean,
     _toolCallId?: string,
     onOpenArtifact?: (filename: string) => void
-  ): ToolRenderResult {
+  ): ToolRenderResult | null {
     return renderFileTool("write", params as WriteToolArgs | undefined, result, isStreaming, onOpenArtifact);
   },
 });
@@ -49,7 +49,7 @@ registerToolRenderer("edit", {
     isStreaming?: boolean,
     _toolCallId?: string,
     onOpenArtifact?: (filename: string) => void
-  ): ToolRenderResult {
+  ): ToolRenderResult | null {
     return renderFileTool("edit", params as EditToolArgs | undefined, result, isStreaming, onOpenArtifact);
   },
 });
@@ -73,7 +73,7 @@ export function renderTool(
   isStreaming?: boolean,
   toolCallId?: string,
   onOpenArtifact?: (filename: string) => void
-): ToolRenderResult {
+): ToolRenderResult | null {
   const renderer = getToolRenderer(toolName);
   if (renderer) {
     return renderer.render(toolName, params, result, isStreaming, toolCallId, onOpenArtifact);

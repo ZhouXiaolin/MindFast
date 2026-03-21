@@ -16,8 +16,10 @@ import { ChatArtifactsPanel } from "./ChatArtifactsPanel";
 import { useSubagentTasks } from "./useSubagentTasks";
 import { useSubagentPanel } from "./useSubagentPanel";
 import { ChatSubagentsPanel } from "./ChatSubagentsPanel";
+import { ChatPlanPanel } from "./ChatPlanPanel";
 import { SubagentToolProvider } from "./tools";
 import { useSubtaskRuns } from "./useSubtaskRuns";
+import { usePlanPanel } from "./usePlanPanel";
 import {
   ArtifactPreviewProvider,
   useArtifactPreviewEntries,
@@ -272,6 +274,12 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     resetKey: sessionId,
   });
 
+  const { planData, visible: showPlanPanel } = usePlanPanel(
+    workspaceFiles,
+    messages,
+    { resetKey: sessionId }
+  );
+
   const scrollToBottom = useCallback(() => {
     if (!autoScrollRef.current) return;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -383,7 +391,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
       <div className="relative flex h-full flex-1 min-w-0">
       {/* Chat column */}
       <div
-        className={cn("chat-column-shell flex h-full min-w-0 flex-1 flex-col", CHAT_FONT_CLASS[chatFont])}
+        className={cn("chat-column-shell relative flex h-full min-w-0 flex-1 flex-col", CHAT_FONT_CLASS[chatFont])}
         style={{ minHeight: 0 }}
       >
         <div className="chat-topbar flex shrink-0 items-center justify-between px-4 py-3">
@@ -504,6 +512,10 @@ export function ChatUI({ sessionId }: ChatUIProps) {
               </div>
             </div>
           </div>
+        ) : null}
+
+        {showPlanPanel && planData ? (
+          <ChatPlanPanel planData={planData} />
         ) : null}
       </div>
 

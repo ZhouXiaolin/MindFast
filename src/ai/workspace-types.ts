@@ -2,6 +2,7 @@ import type { Subtask } from "./subagent-types";
 
 export const ARTIFACTS_DIR = "artifacts";
 export const WIDGETS_DIR = "widgets";
+export const PLANS_DIR = "plans";
 export const BASH_TOOL_NAME = "bash";
 export const SUBAGENT_BASH_COMMAND = "subagent";
 
@@ -124,6 +125,11 @@ export function isArtifactPath(inputPath: string): boolean {
 export function isWidgetPath(inputPath: string): boolean {
   const path = normalizeWorkspacePath(inputPath);
   return path === WIDGETS_DIR || path.startsWith(`${WIDGETS_DIR}/`);
+}
+
+export function isPlanPath(inputPath: string): boolean {
+  const path = normalizeWorkspacePath(inputPath);
+  return path === PLANS_DIR || path.startsWith(`${PLANS_DIR}/`);
 }
 
 export function getDisplayPath(inputPath: string): string {

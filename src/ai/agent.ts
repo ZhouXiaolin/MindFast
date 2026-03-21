@@ -23,6 +23,7 @@ const DEFAULT_SYSTEM_PROMPT = `You are a helpful assistant. Answer directly in c
 - widgets/ — inline HTML widgets rendered in chat (guidelines apply here)
 - artifacts/ — persistent artifacts shown in the artifacts panel. Supports HTML, SVG, Markdown, images, and code files. JavaScript (.js) and Python (.py) artifacts are executed in a browser sandbox — write browser-compatible code, not Node.js or server-side code.
 - guidelines/ — widget generation rules (read-only unless the user asks to change them)
+- plans/ — task plans stored as JSONL files (one JSON object per line)
 
 ## Widget generation protocol
 
@@ -32,6 +33,19 @@ Before writing any HTML file under widgets/, first read guidelines/index.md and 
 
 Call bash with command "subagent" and pass JSON in stdin: {"subtasks":[{"id":"...","label":"...","prompt":"..."}]}
 Use subagents only when the user explicitly requests parallel or independent concurrent work. Each subtask must be self-contained. Subagents must not start further subagents.
+
+## Tasks
+
+Tasks provide structured plan tracking for complex work using standard tools:
+- TaskCreate: Use write tool to create plans/{planId}.jsonl
+- TaskUpdate: Use edit tool to modify a step's status in the JSONL file
+- TaskGet/TaskList: Use read tool to retrieve steps from the JSONL file
+
+JSONL format (one step per line): {"description":"...","status":"pending|in_progress|completed|failed"}
+
+All tasks are flat and equal — no hierarchical or parent-child relationships exist between steps.
+
+Use Tasks to break down complex work into trackable steps and maintain execution state across sessions.
 
 ## Behavior
 

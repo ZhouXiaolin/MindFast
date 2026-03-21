@@ -14,5 +14,5 @@ export interface ToolRenderer<TParams = unknown, TDetails = unknown> {
     isStreaming?: boolean,
     toolCallId?: string,
     onOpenArtifact?: (filename: string) => void
-  ): ToolRenderResult;
+  ): ToolRenderResult | null;
 }

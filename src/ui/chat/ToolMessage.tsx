@@ -43,6 +43,10 @@ export function ToolMessage({
     onOpenArtifact
   );
 
+  if (!renderResult) {
+    return null;
+  }
+
   if (renderResult.isCustom) {
     return <>{renderResult.content}</>;
   }

@@ -4,7 +4,7 @@ import * as Collapsible from "@radix-ui/react-collapsible";
 import { useEffect, useState } from "react";
 import type { EditToolArgs, WriteToolArgs } from "../../../ai/file-tools";
 import type { FileToolResultDetails } from "../../../ai/workspace-types";
-import { isArtifactPath, isWidgetPath } from "../../../ai/workspace-types";
+import { isArtifactPath, isPlanPath, isWidgetPath } from "../../../ai/workspace-types";
 import { CodeBlock } from "../CodeBlock";
 import { InlineArtifactPreview } from "../../artifacts/InlineArtifactPreview";
 import { ArtifactPill } from "./ArtifactPill";
@@ -119,7 +119,15 @@ export function renderFileTool(
   result: ToolResultMessage | undefined,
   isStreaming?: boolean,
   onOpenArtifact?: (filename: string) => void
-): ToolRenderResult {
+): ToolRenderResult | null {
+  const requestedPath = (params as { path?: string } | undefined)?.path;
+  const details = getFileDetails(result);
+  const path = details?.path ?? requestedPath;
+
+  if (isPlanPath(path ?? "")) {
+    return null;
+  }
+
   const state = result
     ? result.isError
       ? "error"
@@ -131,9 +139,6 @@ export function renderFileTool(
   const labels = toolName === "write"
     ? { streaming: "Writing file", complete: "Wrote file" }
     : { streaming: "Editing file", complete: "Edited file" };
-  const requestedPath = (params as { path?: string } | undefined)?.path;
-  const details = getFileDetails(result);
-  const path = details?.path ?? requestedPath;
   const finalContent = details?.content;
   const draftContent = toolName === "write" ? (params as WriteToolArgs | undefined)?.content : undefined;
   const previewContent = finalContent ?? draftContent;
