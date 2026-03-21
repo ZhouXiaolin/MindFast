@@ -17,10 +17,11 @@ interface SandboxedIframeProps {
 }
 
 function getRuntimeScript(sandboxId: string, continuousHeightUpdates: boolean): string {
-  return `<style>
+  return `<style data-mindfast-runtime>
 html, body {
   font-size: initial;
 }
+@keyframes _fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
 </style>
 <script>
 window.__mindfastSandboxId = ${JSON.stringify(sandboxId)};
@@ -132,6 +133,16 @@ window.__mindfastContinuousHeightUpdates = ${JSON.stringify(continuousHeightUpda
     post({ type: "iframe-ready" });
   });
 
+  // Sync <style> and <link rel="stylesheet"> from new <head> into current <head>,
+  // preserving runtime elements (marked with data-mindfast-runtime).
+  function syncHeadStyles(newHead) {
+    if (!newHead || !document.head) return;
+    var old = document.head.querySelectorAll('style:not([data-mindfast-runtime]), link[rel="stylesheet"]:not([data-mindfast-runtime])');
+    for (var i = 0; i < old.length; i++) old[i].parentNode.removeChild(old[i]);
+    var fresh = newHead.querySelectorAll('style, link[rel="stylesheet"]');
+    for (var j = 0; j < fresh.length; j++) document.head.appendChild(fresh[j].cloneNode(true));
+  }
+
   // morphdom incremental update
   window.addEventListener("message", function(event) {
     var data = event.data;
@@ -141,8 +152,21 @@ window.__mindfastContinuousHeightUpdates = ${JSON.stringify(continuousHeightUpda
     try {
       var parser = new DOMParser();
       var newDoc = parser.parseFromString(data.html, "text/html");
+      syncHeadStyles(newDoc.head);
       if (newDoc.body && document.body) {
-        morphdom(document.body, newDoc.body, { childrenOnly: true });
+        morphdom(document.body, newDoc.body, {
+          childrenOnly: true,
+          onBeforeElUpdated: function(fromEl, toEl) {
+            if (fromEl.isEqualNode(toEl)) return false;
+            return true;
+          },
+          onNodeAdded: function(node) {
+            if (node.nodeType === 1 && node.tagName !== 'STYLE' && node.tagName !== 'SCRIPT') {
+              node.style.animation = '_fadeIn 0.3s ease both';
+            }
+            return node;
+          }
+        });
       }
       reportHeight();
     } catch(e) {}
@@ -173,7 +197,7 @@ function prepareHtmlDocument(
   return `<!DOCTYPE html><html><head>${runtime}</head><body>${htmlContent}</body></html>`;
 }
 
-const DEBOUNCE_MS = 300;
+const DEBOUNCE_MS = 150;
 
 export function SandboxedIframe({
   htmlContent,
