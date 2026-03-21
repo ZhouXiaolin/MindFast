@@ -56,8 +56,18 @@ export function ArtifactsPage() {
 
         <div className="flex-1 min-h-0 overflow-y-auto">
           {loading ? (
-            <div className="flex h-full items-center justify-center text-sidebar-muted">
-              Loading…
+            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="rounded-[1.5rem] border border-sidebar-soft bg-sidebar-panel p-4 animate-pulse">
+                  <div className="h-44 rounded-[1.25rem] bg-sidebar-soft" />
+                  <div className="mt-4 flex items-center gap-2">
+                    <div className="h-3 w-3 rounded bg-sidebar-soft" />
+                    <div className="h-3 w-16 rounded-lg bg-sidebar-soft" />
+                  </div>
+                  <div className="mt-2 h-5 w-40 rounded-lg bg-sidebar-soft" />
+                  <div className="mt-1 h-3 w-28 rounded-lg bg-sidebar-soft" />
+                </div>
+              ))}
             </div>
           ) : artifacts.length > 0 ? (
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
@@ -68,7 +78,7 @@ export function ArtifactsPage() {
                   onClick={() =>
                     navigate(`/artifacts/${artifact.sessionId}/${encodeURIComponent(artifact.artifactId)}`)
                   }
-                  className="rounded-[1.5rem] border border-sidebar-soft bg-sidebar-panel p-4 text-left transition-colors hover:bg-sidebar-panel-strong"
+                  className="rounded-[1.5rem] border border-sidebar-soft bg-sidebar-panel shadow-card p-4 text-left cursor-pointer transition-all duration-200 hover:bg-sidebar-panel-strong hover:shadow-card-md hover:-translate-y-px"
                 >
                   <ArtifactCardPreview artifact={artifact} />
                   <div className="mt-4 flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-sidebar-muted">

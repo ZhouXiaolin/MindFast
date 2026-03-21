@@ -20,7 +20,7 @@ export function ArtifactDetailPage() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center p-6 text-sidebar-muted">
-        Loading…
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-sidebar-muted border-t-accent" />
       </div>
     );
   }
@@ -41,7 +41,7 @@ export function ArtifactDetailPage() {
             <button
               type="button"
               onClick={() => navigate("/artifacts")}
-              className="mb-3 inline-flex items-center gap-2 rounded-full border border-sidebar-soft bg-sidebar-panel px-3 py-1.5 text-sm text-sidebar transition-colors hover:bg-sidebar-panel-strong"
+              className="mb-3 inline-flex items-center gap-2 rounded-full border border-sidebar-soft bg-sidebar-panel px-3 py-1.5 text-sm text-sidebar cursor-pointer transition-all duration-200 hover:bg-sidebar-panel-strong"
             >
               <ChevronLeft className="h-4 w-4" />
               <span>{t("artifacts")}</span>

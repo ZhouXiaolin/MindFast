@@ -26,6 +26,9 @@
     --semantic-warning: #facc15;
     --semantic-info: #3b82f6;
     --semantic-success: #10b981;
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.15);
+    --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.25);
   }
   /* Light theme — 与 base46 语义对应 */
   [data-theme="light"] {
@@ -45,6 +48,9 @@
     --semantic-warning: #ca8a04;
     --semantic-info: #2563eb;
     --semantic-success: #059669;
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.08);
   }
   body {
     --chat-shell: color-mix(in srgb, var(--sidebar-bg) 76%, var(--app-bg));
@@ -87,6 +93,7 @@
   .text-accent { color: var(--accent); }
   .text-accent-foreground { color: var(--accent-foreground); }
   .border-accent { border-color: var(--accent); }
+  .border-t-accent { border-top-color: var(--accent); }
   .ring-accent { --tw-ring-color: var(--accent); }
   .bg-accent\/10 { background-color: color-mix(in srgb, var(--accent) 10%, transparent); }
   .bg-accent\/20 { background-color: color-mix(in srgb, var(--accent) 20%, transparent); }
@@ -112,6 +119,13 @@
   .bg-semantic-warning\/10 { background-color: color-mix(in srgb, var(--semantic-warning) 10%, transparent); }
   .border-semantic-error\/25 { border-color: color-mix(in srgb, var(--semantic-error) 25%, transparent); }
   .border-semantic-error\/30 { border-color: color-mix(in srgb, var(--semantic-error) 30%, transparent); }
+  /* Shadow depth scale */
+  .shadow-card { box-shadow: var(--shadow-xs); }
+  .shadow-card-md { box-shadow: var(--shadow-sm); }
+  .shadow-card-lg { box-shadow: var(--shadow-md); }
+  .hover\:shadow-card-md:hover { box-shadow: var(--shadow-sm); }
+  .hover\:shadow-card-lg:hover { box-shadow: var(--shadow-md); }
+  .hover\:shadow-card:hover { box-shadow: var(--shadow-xs); }
 }
 
 /* Settings 与侧边栏统一：使用同一套 sidebar 变量 */

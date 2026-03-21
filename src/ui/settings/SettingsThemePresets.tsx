@@ -30,7 +30,7 @@ function PresetCard({
       type="button"
       onClick={onSelect}
       className={cn(
-        "flex flex-col rounded-xl border-2 text-left transition-colors overflow-hidden",
+        "flex flex-col rounded-xl border-2 text-left cursor-pointer transition-all duration-200 overflow-hidden",
         "hover:border-sidebar focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
         isSelected ? "border-accent bg-sidebar-panel" : "border-sidebar-soft bg-sidebar-panel/50"
       )}

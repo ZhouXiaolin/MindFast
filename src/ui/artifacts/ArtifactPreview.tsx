@@ -43,11 +43,6 @@ export function ArtifactPreview({ filename, content }: ArtifactRendererProps) {
 
   return (
     <div className="relative h-full">
-      {resolved.statusText ? (
-        <div className="absolute right-3 top-3 z-10 rounded-full border border-sidebar-soft bg-sidebar-panel/90 px-2.5 py-1 text-xs text-sidebar-muted shadow-sm backdrop-blur-sm">
-          {resolved.statusText}
-        </div>
-      ) : null}
       <Renderer key={rendererKey} filename={filename} content={resolved.content} />
     </div>
   );

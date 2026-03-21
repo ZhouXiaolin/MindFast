@@ -354,7 +354,7 @@ export function SettingsProvider() {
         <button
           type="button"
           onClick={() => setAddModalOpen(true)}
-          className="rounded-lg border border-sidebar bg-sidebar-hover px-4 py-2 text-sm text-sidebar hover:opacity-90 shrink-0"
+          className="rounded-lg border border-sidebar bg-sidebar-hover px-4 py-2 text-sm text-sidebar cursor-pointer hover:opacity-90 shrink-0"
         >
           {t("settingsAddCustomProvider")}
         </button>
@@ -380,7 +380,7 @@ export function SettingsProvider() {
                     type="button"
                     onClick={() => setSelectedId(item.id)}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors w-full",
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm cursor-pointer transition-all duration-200 w-full",
                       selectedId === item.id
                         ? "bg-sidebar-hover text-sidebar"
                         : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
@@ -469,7 +469,7 @@ export function SettingsProvider() {
           type="button"
           onClick={handleSaveAll}
           disabled={saving || !hasUnsavedChanges}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:opacity-90 disabled:opacity-50"
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-accent-foreground cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? "Saving…" : t("providerSave")}
         </button>
@@ -504,7 +504,7 @@ function Toggle({
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors",
+        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors cursor-pointer",
         checked ? "bg-accent" : "bg-sidebar-muted/50",
         disabled && "opacity-50 cursor-not-allowed"
       )}
@@ -622,7 +622,7 @@ function CommonProviderPanel({
             type="button"
             onClick={onFetchModels}
             disabled={fetchingModels}
-            className="flex items-center gap-1.5 rounded-lg border border-sidebar bg-sidebar-hover px-3 py-1.5 text-sm text-sidebar hover:opacity-90 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg border border-sidebar bg-sidebar-hover px-3 py-1.5 text-sm text-sidebar cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {fetchingModels ? (
               <>
@@ -797,7 +797,7 @@ function CustomProviderPanel({
             type="button"
             onClick={onFetchModels}
             disabled={fetchingModels}
-            className="flex items-center gap-1.5 rounded-lg border border-sidebar bg-sidebar-hover px-3 py-1.5 text-sm text-sidebar hover:opacity-90 disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg border border-sidebar bg-sidebar-hover px-3 py-1.5 text-sm text-sidebar cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {fetchingModels ? (
               <>
@@ -861,7 +861,7 @@ function CustomProviderPanel({
         <button
           type="button"
           onClick={onDelete}
-          className="rounded-lg border border-sidebar px-4 py-2 text-sm text-sidebar hover:bg-sidebar-hover"
+          className="rounded-lg border border-sidebar px-4 py-2 text-sm text-sidebar cursor-pointer hover:bg-sidebar-hover"
         >
           {t("providerDelete")}
         </button>

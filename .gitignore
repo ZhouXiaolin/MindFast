@@ -27,3 +27,6 @@ dist
 node_modules
 .serena
 *.lock
+.codex
+.cursor
+.claude

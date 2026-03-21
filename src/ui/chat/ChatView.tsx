@@ -61,7 +61,7 @@ export function ChatView() {
   if (hasConfig === null) {
     return (
       <div className="flex h-full items-center justify-center p-6 text-sidebar-muted">
-        Loading…
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-sidebar-muted border-t-accent" />
       </div>
     );
   }
@@ -73,7 +73,7 @@ export function ChatView() {
   if (!sessionId) {
     return (
       <div className="flex h-full items-center justify-center p-6 text-sidebar-muted">
-        Loading…
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-sidebar-muted border-t-accent" />
       </div>
     );
   }

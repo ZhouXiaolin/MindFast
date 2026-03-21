@@ -47,7 +47,7 @@ export function ChatsPage({ autoFocusSearch = false }: ChatsPageProps) {
           <button
             type="button"
             onClick={() => navigate(`/chat/${createSessionId()}`)}
-            className="inline-flex items-center gap-2 rounded-full border border-sidebar-soft bg-sidebar-panel px-4 py-2 text-sm text-sidebar transition-colors hover:bg-sidebar-panel-strong"
+            className="inline-flex items-center gap-2 rounded-full border border-sidebar-soft bg-sidebar-panel px-4 py-2 text-sm text-sidebar cursor-pointer transition-all duration-200 hover:bg-sidebar-panel-strong"
           >
             <MessageSquarePlus className="h-4 w-4" />
             <span>{t("newChat")}</span>
@@ -68,8 +68,21 @@ export function ChatsPage({ autoFocusSearch = false }: ChatsPageProps) {
 
         <div className="flex-1 min-h-0 overflow-y-auto">
           {loading ? (
-            <div className="flex h-full items-center justify-center text-sidebar-muted">
-              Loading…
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="rounded-[1.5rem] border border-sidebar-soft bg-sidebar-panel px-5 py-4 animate-pulse">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="h-5 w-48 rounded-lg bg-sidebar-soft" />
+                      <div className="h-4 w-full max-w-xs rounded-lg bg-sidebar-soft" />
+                    </div>
+                    <div className="shrink-0 space-y-2">
+                      <div className="h-3 w-24 rounded-lg bg-sidebar-soft" />
+                      <div className="h-3 w-16 rounded-lg bg-sidebar-soft" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : filteredSessions.length > 0 ? (
             <div className="space-y-3">
@@ -79,8 +92,8 @@ export function ChatsPage({ autoFocusSearch = false }: ChatsPageProps) {
                   type="button"
                   onClick={() => navigate(`/chat/${session.id}`)}
                   className={cn(
-                    "w-full rounded-[1.5rem] border border-sidebar-soft bg-sidebar-panel px-5 py-4 text-left transition-colors",
-                    "hover:bg-sidebar-panel-strong"
+                    "w-full rounded-[1.5rem] border border-sidebar-soft bg-sidebar-panel shadow-card px-5 py-4 text-left cursor-pointer transition-all duration-200",
+                    "hover:bg-sidebar-panel-strong hover:shadow-card-md hover:-translate-y-px"
                   )}
                 >
                   <div className="flex items-start justify-between gap-4">

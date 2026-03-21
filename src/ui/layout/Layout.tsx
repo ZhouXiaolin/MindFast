@@ -63,7 +63,7 @@ export function Layout() {
           <button
             type="button"
             onClick={toggleSidebar}
-            className="rounded p-1.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
+            className="rounded p-1.5 text-sidebar-muted cursor-pointer transition-all duration-200 hover:bg-sidebar-hover hover:text-sidebar"
             aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
           >
             {sidebarOpen ? (
@@ -79,7 +79,7 @@ export function Layout() {
             type="button"
             onClick={() => navigate(`/chat/${createSessionId()}`)}
             className={cn(
-              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar",
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-sidebar-muted cursor-pointer transition-all duration-200 hover:bg-sidebar-hover hover:text-sidebar",
               !sidebarOpen && "justify-center px-0"
             )}
           >
@@ -90,7 +90,7 @@ export function Layout() {
             to="/search"
             className={({ isActive }) =>
               cn(
-                "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm cursor-pointer transition-all duration-200",
                 !sidebarOpen && "justify-center px-0",
                 isActive
                   ? "bg-sidebar-hover text-sidebar"
@@ -111,7 +111,7 @@ export function Layout() {
                 to={item.path}
                 className={({ isActive }) =>
                   cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
+                    "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm cursor-pointer transition-all duration-200",
                     !sidebarOpen && "justify-center px-0",
                     isActive
                       ? "bg-sidebar-hover text-sidebar"
@@ -129,7 +129,7 @@ export function Layout() {
                 <button
                   type="button"
                   onClick={() => setRecentsOpen((open) => !open)}
-                  className="mt-2 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
+                  className="mt-2 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-sidebar-muted cursor-pointer transition-all duration-200 hover:bg-sidebar-hover hover:text-sidebar"
                   aria-expanded={recentsOpen}
                 >
                   <span>{t("recents")}</span>
@@ -145,7 +145,7 @@ export function Layout() {
                             to={`/chat/${session.id}`}
                             className={({ isActive }) =>
                               cn(
-                                "block truncate rounded-lg px-3 py-2 text-sm",
+                                "block truncate rounded-lg px-3 py-2 text-sm cursor-pointer transition-all duration-200",
                                 isActive
                                   ? "bg-sidebar-hover text-sidebar"
                                   : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
@@ -173,7 +173,7 @@ export function Layout() {
               type="button"
               onClick={() => setColorMode(resolvedTheme === "dark" ? "light" : "dark")}
               className={cn(
-                "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-sidebar-muted transition-colors hover:bg-sidebar-hover hover:text-sidebar",
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-sidebar-muted cursor-pointer transition-all duration-200 hover:bg-sidebar-hover hover:text-sidebar",
                 !sidebarOpen && "justify-center px-0"
               )}
               aria-label={t("theme")}
@@ -196,7 +196,7 @@ export function Layout() {
               to="/settings/general"
               className={({ isActive }) =>
                 cn(
-                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
+                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm cursor-pointer transition-all duration-200",
                   !sidebarOpen && "justify-center px-0",
                   isActive ? "bg-sidebar-hover text-sidebar" : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
                 )

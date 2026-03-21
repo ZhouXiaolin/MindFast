@@ -6,175 +6,228 @@ export interface SeedWorkspaceFile {
 export const GUIDELINE_SEED_FILES: SeedWorkspaceFile[] = [
   {
     path: "guidelines/index.md",
-    content: `# Widget and artifact guidelines
+    content: `# Widget Guidelines
 
-These files define the generation rules for visual output in this workspace.
-
-Workflow:
-1. Read guidelines/manifest.json.
-2. Identify the output type you are about to generate.
-3. Read every guideline file listed for that type.
-4. Only then write or update files under widgets/ or artifacts/.
-
-Guideline files are the source of truth for structure, streaming order, host compatibility, and visual rules.
+Before generating HTML files under widgets/:
+1. Read guidelines/meta.json
+2. Choose relevant categories based on the widget you are about to generate (core is always required)
+3. Read only the guideline files you chose
+4. Generate the complete widget in a single write call
 `,
   },
   {
-    path: "guidelines/manifest.json",
+    path: "guidelines/meta.json",
     content: `{
-  "version": 1,
-  "default": [
-    "guidelines/core.md"
-  ],
-  "types": {
-    "widget_html": [
-      "guidelines/core.md",
-      "guidelines/streaming.md",
-      "guidelines/interactive.md"
-    ],
-    "widget_chart": [
-      "guidelines/core.md",
-      "guidelines/streaming.md",
-      "guidelines/interactive.md",
-      "guidelines/chart.md"
-    ],
-    "widget_mockup": [
-      "guidelines/core.md",
-      "guidelines/mockup.md"
-    ],
-    "widget_svg_diagram": [
-      "guidelines/core.md",
-      "guidelines/diagram.md",
-      "guidelines/svg-classes.md"
-    ],
-    "widget_art": [
-      "guidelines/core.md",
-      "guidelines/art.md"
-    ],
-    "artifact_html": [
-      "guidelines/core.md",
-      "guidelines/streaming.md",
-      "guidelines/interactive.md"
-    ],
-    "artifact_svg": [
-      "guidelines/core.md",
-      "guidelines/diagram.md",
-      "guidelines/svg-classes.md"
-    ]
+  "version": 2,
+  "categories": {
+    "core": "REQUIRED. Output structure, host adaptation, tool usage, one-shot write rule",
+    "layout": "Container sizing, spacing, alignment, flex/grid, responsive containers",
+    "color": "Palette constraints, contrast ratios, semantic colors, dark-mode safety",
+    "typography": "Font size hierarchy, line height, readability floor, CJK considerations",
+    "streaming": "HTML render order, mid-stream stability, script initialization timing",
+    "interactive": "Event binding, native controls, local state, default-state design",
+    "animation": "CSS transitions, micro-interactions, performance budgets, reduced-motion",
+    "chart": "Chart.js setup, canvas containers, axis labels, legend placement",
+    "data-display": "Stat cards, KPIs, tables, ranked lists, progress indicators",
+    "form": "Input controls, validation feedback, form layout, accessibility",
+    "diagram": "SVG viewBox, node/edge layout, label rules, color semantics",
+    "mockup": "Product UI fidelity, card/panel hierarchy, restrained decoration",
+    "art": "Creative visuals, generative art, bold composition, self-contained output",
+    "canvas": "Canvas 2D bindng, pixel ops, render loops, HiDPI scaling",
+    "game": "Game loop, collision, scoring, level state, keyboard/touch input",
+    "svg-host": "Pre-loaded SVG host classes quick reference"
   }
 }`,
   },
   {
     path: "guidelines/core.md",
-    content: `# Core rules
+    content: `# Core
 
-- Widgets live under widgets/. Artifacts live under artifacts/.
-- Read the relevant guideline files before writing or updating widget or artifact files.
-- The tool output should contain only renderable content. Put explanation in normal assistant text, not inside the visual file.
-- Prefer focused outputs. Do not cram multiple unrelated ideas into one widget or one artifact.
-- Match the host surface. Avoid decorative chrome that fights the app UI.
-- Use transparent or host-friendly outer layout. Do not hardcode a full-page dark background unless the visual itself requires it.
-- Keep typography readable. Do not go below 11px.
-- Prefer simple HTML, SVG, and vanilla JavaScript. Do not introduce frameworks.
-- Use semantic structure and stable IDs only when the script actually needs them.
-- Do not modify files under guidelines/ unless the user explicitly asks to change the guideline system.
+- Widgets go under widgets/
+- Widget HTML must be written in a single write call — never split across multiple writes or edits
+- Document structure: <html><head><style>...</style></head><body>...markup...<script>...</script></body></html>
+- Output only renderable content; put explanations in assistant text, not in the file
+- Use transparent or host-friendly outer backgrounds; do not hardcode full-page dark unless the visual requires it
+- Prefer vanilla HTML/CSS/JS — no frameworks
+- Do not modify files under guidelines/ unless the user explicitly requests it
+`,
+  },
+  {
+    path: "guidelines/layout.md",
+    content: `# Layout
+
+- Use flex or grid for layout; avoid float and table hacks
+- Minimum container width 280px; do not assume full-screen
+- Inner padding 12-16px, element gap 8-12px
+- Let height grow naturally; avoid fixed heights unless the visual demands it
+- Center with margin: 0 auto or flex justify-content
+`,
+  },
+  {
+    path: "guidelines/color.md",
+    content: `# Color
+
+- Limit palette to 2-3 primary colors plus neutrals
+- Maintain 4.5:1 minimum contrast for text
+- Use color to encode meaning, not decoration
+- Avoid pure black (#000) on pure white (#fff); prefer off-black on off-white
+- Test legibility on both light and dark host backgrounds
+`,
+  },
+  {
+    path: "guidelines/typography.md",
+    content: `# Typography
+
+- Never go below 11px for any visible text
+- Heading hierarchy: one h1, use size/weight difference not color alone
+- Body line-height 1.4-1.6 for readability
+- Use system font stack unless the design specifically calls for a custom font
+- For CJK content, add 0.05-0.1em letter-spacing on body text
 `,
   },
   {
     path: "guidelines/streaming.md",
-    content: `# Streaming HTML rules
+    content: `# Streaming
 
-- For HTML output, order content as: style, markup, then script last.
-- Keep style blocks short. Use inline styles when that improves mid-stream stability.
-- Do not rely on JavaScript for the initial visible structure.
-- During streaming, the host may show partial HTML before scripts finish.
-- Dynamic behavior should be initialized by the final script pass, not by partial intermediate output.
-- If the output uses canvas, animation loops, timers, or external libraries, make sure the script can initialize cleanly from the final DOM state.
-- Avoid hidden sections, tabs, carousels, and fixed-position overlays in the initial stream.
-- External scripts must come from allowed CDNs only when truly needed.
+- Order content: <style> first, then markup, then <script> last
+- Do not rely on JavaScript for initial visible structure
+- Use inline styles where they improve mid-stream visual stability
+- Canvas, animations, and timers must initialize cleanly from the final DOM state
+- Avoid hidden sections, tabs, carousels, and fixed overlays in the initial stream
+- External scripts from CDN only when truly necessary
 `,
   },
   {
     path: "guidelines/interactive.md",
-    content: `# Interactive widget rules
+    content: `# Interactive
 
-- Build one clear interaction model per widget.
-- Use native controls: button, input, select, textarea, canvas, svg.
-- Keep controls close to the output they affect.
-- Round any number shown to the user. Avoid floating-point noise.
-- Keep state local and simple. Prefer a single script block with straightforward event wiring.
-- Do not require network access for the core interaction.
-- Make the default state meaningful before the user clicks anything.
-- For explainers, show the essential visual inline and keep prose outside the widget file.
+- One clear interaction model per widget
+- Use native controls: button, input, select, textarea, canvas, svg
+- Keep controls visually close to the output they affect
+- Make the default state meaningful before any user interaction
+- Keep state in a single script block with straightforward event wiring
+- Do not require network access for core interaction
+`,
+  },
+  {
+    path: "guidelines/animation.md",
+    content: `# Animation
+
+- Use CSS transitions (150-300ms) for state changes; avoid instant flips
+- Limit JS-driven animation to canvas or cases CSS cannot handle
+- Respect prefers-reduced-motion: disable non-essential motion
+- No more than 2 simultaneous animated properties per element
+- Avoid layout-triggering animations (top/left/width/height); prefer transform and opacity
 `,
   },
   {
     path: "guidelines/chart.md",
-    content: `# Chart rules
+    content: `# Chart
 
-- Wrap each canvas in a container with an explicit height.
-- Do not set CSS height directly on the canvas element when using Chart.js responsive mode.
-- If you load Chart.js from a CDN, use a named init function plus an onload path and a fallback if window.Chart already exists.
-- Keep legends outside the canvas when possible.
-- Use readable axis labels and enough vertical space for the number of bars or series shown.
-- Favor clarity over decoration. Avoid gradients, glow, and heavy shadows.
-- If the chart needs summary metrics, place them above or beside the chart as simple cards.
+- Wrap canvas in a container with explicit height; do not set CSS height on canvas directly in responsive mode
+- Load Chart.js via CDN with a named init function + onload guard; fall back if window.Chart exists
+- Keep legends outside the canvas when possible
+- Use readable axis labels with enough vertical space for bar counts
+- Favor clarity over decoration — no gradients, glow, or heavy shadows
+- Place summary metrics above or beside the chart as simple cards
+`,
+  },
+  {
+    path: "guidelines/data-display.md",
+    content: `# Data Display
+
+- Stat cards: large number, small label, optional trend indicator
+- Tables: striped rows or subtle borders, sticky header for long lists
+- Ranked lists: clear position marker, consistent row height
+- KPIs: group related metrics; max 4-6 per row
+- Progress: use native <progress> or a simple bar div; label the percentage
+`,
+  },
+  {
+    path: "guidelines/form.md",
+    content: `# Form
+
+- Label every input; prefer <label> wrapping the control
+- Show validation feedback inline, adjacent to the field
+- Use appropriate input types: email, number, date, etc.
+- Group related fields with fieldset or visual spacing
+- Provide a clear primary action button; disable it during submission
+- Keep tab order logical; test with keyboard navigation
 `,
   },
   {
     path: "guidelines/diagram.md",
-    content: `# SVG diagram rules
+    content: `# Diagram
 
-- Use one svg per file output unless the user explicitly needs a different structure.
-- Prefer a stable viewBox and keep content inside safe margins.
-- Keep labels short. If a label does not fit, shorten it or split the diagram.
-- Do not route arrows through unrelated nodes.
-- Use sparse color intentionally. Color should encode meaning, not just variety.
-- Default to sentence case labels.
-- For complex systems, prefer multiple smaller diagrams over one dense diagram.
-- Flowcharts should stay directional and legible. Illustrative diagrams should privilege intuition over exhaustive labeling.
+- One SVG per file unless the user needs otherwise
+- Set a stable viewBox; keep content within safe margins
+- Keep labels short; shorten or split the diagram if labels overflow
+- Do not route arrows through unrelated nodes
+- Use color sparingly to encode meaning, not variety
+- For complex systems, prefer multiple smaller diagrams over one dense diagram
 `,
   },
   {
     path: "guidelines/mockup.md",
-    content: `# Mockup rules
+    content: `# Mockup
 
-- Mockups should feel like product UI, not posters.
-- Use simple cards, panels, lists, and forms with restrained borders and spacing.
-- Contained mockups may sit inside a surface or frame. Full-width dashboards do not need extra framing.
-- Avoid decorative effects that distract from hierarchy.
-- Keep the hierarchy obvious: title area, content area, secondary metadata.
-- If a recommendation or featured state exists, signal it with border emphasis or a small badge, not a radically different card design.
+- Mockups should look like product UI, not posters
+- Use cards, panels, lists, and forms with restrained borders and spacing
+- Keep hierarchy obvious: title area, content area, secondary metadata
+- Signal recommendations with border emphasis or a small badge, not a different card design
+- Avoid decorative effects that distract from hierarchy
 `,
   },
   {
     path: "guidelines/art.md",
-    content: `# Art rules
+    content: `# Art
 
-- Art may be more expressive than product UI, but it still needs to render cleanly in the host.
-- Favor vector or lightweight HTML/SVG techniques over heavy assets.
-- Use bold composition deliberately. Do not add explanation text inside the visual.
-- If color is the main idea, ensure contrast still works in the host environment.
-- Keep the output self-contained and deterministic when possible.
+- Art may be more expressive, but must still render cleanly in the host
+- Favor vector or lightweight HTML/SVG/Canvas techniques
+- Bold composition is encouraged; do not add explanation text inside the visual
+- Ensure contrast works in the host environment
+- Keep output self-contained and deterministic when possible
 `,
   },
   {
-    path: "guidelines/svg-classes.md",
-    content: `# SVG host classes
+    path: "guidelines/canvas.md",
+    content: `# Canvas
 
-Use preloaded SVG classes when available:
+- Get context once; cache the reference — do not call getContext repeatedly
+- Scale for HiDPI: set canvas.width/height to logical size * devicePixelRatio, then CSS size to logical size
+- Use requestAnimationFrame for render loops; cancel on cleanup
+- Clear the full canvas each frame unless the effect is additive
+- Keep the render function pure: read state, draw, done
+`,
+  },
+  {
+    path: "guidelines/game.md",
+    content: `# Game
+
+- Structure as init / update / render loop using requestAnimationFrame
+- Separate game state from rendering — update logic must not depend on draw calls
+- Support both keyboard and touch/click input
+- Show score and status outside the canvas or as an overlay that does not block play
+- Provide a restart mechanism without page reload
+- Keep collision detection simple: AABB or circle; avoid pixel-perfect unless necessary
+`,
+  },
+  {
+    path: "guidelines/svg-host.md",
+    content: `# SVG Host Classes
+
+Pre-loaded classes available in the host environment:
 
 - t: primary text
 - ts: secondary text
 - th: stronger label text
 - box: neutral node box
-- node: interactive or hoverable group
+- node: interactive/hoverable group
 - arr: connector line
 - leader: dashed leader line
-- c-blue, c-teal, c-amber, c-green, c-red, c-purple, c-coral, c-pink, c-gray: semantic color ramps
+- c-blue, c-teal, c-amber, c-green, c-red, c-purple, c-coral, c-pink, c-gray: semantic colors
 
-When these classes are available, prefer them over re-declaring the same styles in every SVG file.
+Prefer these over re-declaring the same styles in every SVG file.
 `,
   },
 ];
-

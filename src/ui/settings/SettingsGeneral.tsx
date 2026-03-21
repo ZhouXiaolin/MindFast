@@ -42,7 +42,7 @@ export function SettingsGeneral() {
                   type="button"
                   onClick={() => setColorMode(value)}
                   className={cn(
-                    "rounded-lg border border-sidebar px-4 py-2 text-sm transition-colors",
+                    "rounded-lg border border-sidebar px-4 py-2 text-sm cursor-pointer transition-all duration-200",
                     colorMode === value
                       ? "bg-sidebar-hover text-sidebar"
                       : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"
@@ -64,7 +64,7 @@ export function SettingsGeneral() {
                   type="button"
                   onClick={() => setChatFont(value)}
                   className={cn(
-                    "rounded-lg border border-sidebar px-4 py-2 text-sm transition-colors",
+                    "rounded-lg border border-sidebar px-4 py-2 text-sm cursor-pointer transition-all duration-200",
                     chatFont === value
                       ? "bg-sidebar-hover text-sidebar"
                       : "text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar"

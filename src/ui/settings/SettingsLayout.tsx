@@ -31,7 +31,7 @@ export function SettingsLayout() {
               end={path === "general" || path === "theme-presets"}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm cursor-pointer transition-all duration-200",
                   isActive
                     ? "bg-sidebar-panel-strong font-medium"
                     : "hover:bg-sidebar-panel"
