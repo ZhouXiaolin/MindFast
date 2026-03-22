@@ -25,7 +25,8 @@ import {
   useArtifactPreviewEntries,
   type ArtifactPreviewEntry,
 } from "../artifacts/ArtifactPreviewContext";
-import { isArtifactPath, normalizeWorkspacePath } from "../../ai/workspace-types";
+import { resolveWorkspaceKind } from "../../extensions";
+import { normalizeWorkspacePath } from "../../ai/workspace-types";
 import type { WorkspaceFile, WorkspaceFileMessage } from "../../ai/workspace/types";
 import {
   extractSubtasksFromToolCall,
@@ -49,7 +50,7 @@ function addArtifactPanelItem(
   label: string
 ) {
   const normalizedPath = normalizeWorkspacePath(artifact.filename);
-  if (!isArtifactPath(normalizedPath) || itemsByPath.has(normalizedPath)) {
+  if (resolveWorkspaceKind(normalizedPath) !== "artifact" || itemsByPath.has(normalizedPath)) {
     return;
   }
 
@@ -220,7 +221,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
 
       const workspaceFileMessage = message as WorkspaceFileMessage;
       const normalizedPath = normalizeWorkspacePath(workspaceFileMessage.filename);
-      if (!isArtifactPath(normalizedPath)) {
+      if (resolveWorkspaceKind(normalizedPath) !== "artifact") {
         continue;
       }
 
@@ -280,6 +281,12 @@ export function ChatUI({ sessionId }: ChatUIProps) {
     messages,
     { resetKey: sessionId }
   );
+
+  const sidebarRightPanel = useMemo(() => {
+    if (hasSubagentTasks && showSubagentsPanel) return "subagent" as const;
+    if (hasArtifacts) return "artifact" as const;
+    return null;
+  }, [hasSubagentTasks, showSubagentsPanel, hasArtifacts]);
 
   const scrollToBottom = useCallback(() => {
     if (!autoScrollRef.current) return;
@@ -520,7 +527,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
         ) : null}
       </div>
 
-      {hasArtifacts && !showSubagentsPanel ? (
+      {sidebarRightPanel === "artifact" ? (
         <ChatArtifactsPanel
           artifactsList={visibleArtifactsList}
           selectedArtifact={selectedArtifact}
@@ -531,7 +538,7 @@ export function ChatUI({ sessionId }: ChatUIProps) {
         />
       ) : null}
 
-      {hasSubagentTasks ? (
+      {sidebarRightPanel === "subagent" || hasSubagentTasks ? (
         <ChatSubagentsPanel
           tasks={subagentTasks}
           selectedTaskId={selectedTaskId}

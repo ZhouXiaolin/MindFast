@@ -4,7 +4,7 @@ import * as Collapsible from "@radix-ui/react-collapsible";
 import { useEffect, useState } from "react";
 import type { EditToolArgs, WriteToolArgs } from "../../../ai/file-tools";
 import type { FileToolResultDetails } from "../../../ai/workspace-types";
-import { isArtifactPath, isPlanPath, isWidgetPath } from "../../../ai/workspace-types";
+import { resolveWorkspaceKind } from "../../../extensions";
 import { CodeBlock } from "../CodeBlock";
 import { InlineArtifactPreview } from "../../artifacts/InlineArtifactPreview";
 import { ArtifactPill } from "./ArtifactPill";
@@ -38,10 +38,11 @@ function ToolHeader({
   onOpenArtifact,
   forceArtifactLink = false,
 }: ToolHeaderProps) {
-  const isWidget = isWidgetPath(path ?? "");
+  const kind = resolveWorkspaceKind(path ?? "");
+  const isWidget = kind === "widget";
   const [open, setOpen] = useState(() => isWidget || state !== "inprogress");
   const hasContent = !!children;
-  const shouldOpenArtifact = forceArtifactLink && !!path && isArtifactPath(path) && !!onOpenArtifact;
+  const shouldOpenArtifact = forceArtifactLink && !!path && kind === "artifact" && !!onOpenArtifact;
 
   useEffect(() => {
     if (isWidget) {
@@ -62,7 +63,7 @@ function ToolHeader({
       <span className={state === "error" ? "text-semantic-error" : state === "complete" ? "text-accent" : ""}>
         {label}
       </span>
-      {path && isArtifactPath(path) ? (
+      {path && kind === "artifact" ? (
         <ArtifactPill filename={path} onOpen={onOpenArtifact} interactive={!shouldOpenArtifact} />
       ) : path ? (
         <span className="rounded-full border border-sidebar-soft bg-sidebar-panel px-2 py-0.5 text-xs text-sidebar-muted">
@@ -123,8 +124,9 @@ export function renderFileTool(
   const requestedPath = (params as { path?: string } | undefined)?.path;
   const details = getFileDetails(result);
   const path = details?.path ?? requestedPath;
+  const kind = resolveWorkspaceKind(path ?? "");
 
-  if (isPlanPath(path ?? "")) {
+  if (kind === "plan") {
     return null;
   }
 
@@ -152,7 +154,7 @@ export function renderFileTool(
           path={path}
           onOpenArtifact={onOpenArtifact}
         >
-          {isWidgetPath(path ?? "") && previewContent !== undefined ? (
+          {kind === "widget" && previewContent !== undefined ? (
             <div className="overflow-hidden rounded-2xl border border-sidebar-soft bg-sidebar-panel">
               <div className="p-2">
                 <InlineArtifactPreview filename={path ?? "widget.txt"} content={previewContent} growWithContent />
@@ -171,13 +173,13 @@ export function renderFileTool(
     };
   }
 
-  const body = isWidgetPath(path ?? "") && finalContent !== undefined ? (
+  const body = kind === "widget" && finalContent !== undefined ? (
     <div className="overflow-hidden rounded-2xl border border-sidebar-soft bg-sidebar-panel">
       <div className="p-2">
         <InlineArtifactPreview filename={path ?? "widget.txt"} content={finalContent} />
       </div>
     </div>
-  ) : isArtifactPath(path ?? "") ? null : toolName === "edit" && params ? (
+  ) : kind === "artifact" ? null : toolName === "edit" && params ? (
     <CodeBlock
       code={`- ${(params as EditToolArgs).old_str}\n+ ${(params as EditToolArgs).new_str}`}
       language="text"

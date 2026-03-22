@@ -1,7 +1,6 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { SubtaskRun } from "../subagent-types";
-import { isWidgetPath, normalizeWorkspacePath } from "../workspace-types";
-import { WorkspaceStore } from "../workspace/store";
+import { extractItemsByKind, extractItemsByKindFromSubtaskRuns } from "../../extensions/extract";
 
 export interface SavedWidgetSummary {
   content: string;
@@ -13,35 +12,18 @@ export interface SavedWidgetSummary {
   widgetId: string;
 }
 
-function buildWidgetPreviewText(content: string): string {
-  const trimmed = content.trim();
-  if (trimmed.length <= 220) {
-    return trimmed;
-  }
-  return `${trimmed.slice(0, 220).trimEnd()}…`;
-}
+const WIDGET_TRUNCATE = { maxLength: 220, collapseWhitespace: false };
 
-function toSavedWidgetSummary(
-  widgetId: string,
-  sessionId: string,
-  sessionTitle: string,
-  updatedAt: string,
-  filename: string,
-  content: string
-): SavedWidgetSummary {
+function toSummary(item: { id: string; filename: string; content: string; previewText: string; sessionId: string; sessionTitle: string; updatedAt: string }): SavedWidgetSummary {
   return {
-    content,
-    filename: normalizeWorkspacePath(filename),
-    previewText: buildWidgetPreviewText(content),
-    sessionId,
-    sessionTitle,
-    updatedAt,
-    widgetId,
+    content: item.content,
+    filename: item.filename,
+    previewText: item.previewText,
+    sessionId: item.sessionId,
+    sessionTitle: item.sessionTitle,
+    updatedAt: item.updatedAt,
+    widgetId: item.id,
   };
-}
-
-function getWidgetId(file: { id?: string }, fallbackId: string): string {
-  return file.id ?? fallbackId;
 }
 
 export function extractWidgetsFromMessages(
@@ -50,22 +32,7 @@ export function extractWidgetsFromMessages(
   updatedAt: string,
   messages: AgentMessage[]
 ): SavedWidgetSummary[] {
-  const store = new WorkspaceStore();
-  store.reconstructFromMessages(messages);
-
-  return store
-    .getSnapshot()
-    .filter(([, widget]) => isWidgetPath(widget.filename))
-    .map(([, widget]) =>
-      toSavedWidgetSummary(
-        getWidgetId(widget, `main:${widget.filename}`),
-        sessionId,
-        sessionTitle,
-        updatedAt,
-        widget.filename,
-        widget.content
-      )
-    );
+  return extractItemsByKind("widget", sessionId, sessionTitle, updatedAt, messages, WIDGET_TRUNCATE).map(toSummary);
 }
 
 export function extractWidgetsFromSubtaskRuns(
@@ -74,20 +41,5 @@ export function extractWidgetsFromSubtaskRuns(
   updatedAt: string,
   runs: Record<string, SubtaskRun> | null | undefined
 ): SavedWidgetSummary[] {
-  if (!runs) return [];
-
-  return Object.entries(runs).flatMap(([runKey, run]) =>
-    run.files
-      .filter((widget) => isWidgetPath(widget.filename))
-      .map((widget, index) =>
-        toSavedWidgetSummary(
-          getWidgetId(widget, `subtask:${runKey}:${index}:${widget.filename}`),
-          sessionId,
-          sessionTitle,
-          updatedAt,
-          widget.filename,
-          widget.content
-        )
-      )
-  );
+  return extractItemsByKindFromSubtaskRuns("widget", sessionId, sessionTitle, updatedAt, runs, WIDGET_TRUNCATE).map(toSummary);
 }

@@ -2,7 +2,7 @@ import { Copy } from "lucide-react";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import type { AssistantMessage as AssistantMessageType, ToolCall, ToolResultMessage } from "@mariozechner/pi-ai";
 import { extractSubtasksFromToolCall, SUBAGENT_TOOL_NAME } from "../../ai/subagent-types";
-import { isArtifactPath, isWidgetPath } from "../../ai/workspace-types";
+import { resolveWorkspaceKind } from "../../extensions";
 import { ThinkingBlock } from "./ThinkingBlock";
 import { ToolMessage } from "./ToolMessage";
 import { MarkdownContent } from "./MarkdownContent";
@@ -50,7 +50,8 @@ function shouldHideToolCall(
     return false;
   }
 
-  return isArtifactPath(path) || isWidgetPath(path);
+  const kind = resolveWorkspaceKind(path);
+  return kind === "artifact" || kind === "widget";
 }
 
 export function AssistantMessage({

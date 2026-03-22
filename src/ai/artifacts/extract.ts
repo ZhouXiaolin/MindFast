@@ -1,7 +1,6 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { SubtaskRun } from "../subagent-types";
-import { isArtifactPath, normalizeWorkspacePath } from "../workspace-types";
-import { WorkspaceStore } from "../workspace/store";
+import { extractItemsByKind, extractItemsByKindFromSubtaskRuns } from "../../extensions/extract";
 
 export type WorkspaceArtifactKind = "html" | "markdown" | "text";
 
@@ -16,19 +15,6 @@ export interface SavedArtifactSummary {
   previewText: string;
 }
 
-function toSingleLine(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
-}
-
-function truncate(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength).trim()}…`;
-}
-
-function buildArtifactPreviewText(content: string): string {
-  return truncate(toSingleLine(content), 140);
-}
-
 function getArtifactKind(filename: string): WorkspaceArtifactKind {
   const lower = filename.toLowerCase();
   if (lower.endsWith(".html") || lower.endsWith(".htm")) return "html";
@@ -36,29 +22,17 @@ function getArtifactKind(filename: string): WorkspaceArtifactKind {
   return "text";
 }
 
-function toSavedArtifactSummary(
-  artifactId: string,
-  sessionId: string,
-  sessionTitle: string,
-  updatedAt: string,
-  filename: string,
-  content: string
-): SavedArtifactSummary {
-  const normalizedFilename = normalizeWorkspacePath(filename);
+function toSummary(item: { id: string; filename: string; content: string; previewText: string; sessionId: string; sessionTitle: string; updatedAt: string }): SavedArtifactSummary {
   return {
-    artifactId,
-    sessionId,
-    sessionTitle,
-    filename: normalizedFilename,
-    content,
-    kind: getArtifactKind(normalizedFilename),
-    updatedAt,
-    previewText: buildArtifactPreviewText(content),
+    artifactId: item.id,
+    sessionId: item.sessionId,
+    sessionTitle: item.sessionTitle,
+    filename: item.filename,
+    content: item.content,
+    kind: getArtifactKind(item.filename),
+    updatedAt: item.updatedAt,
+    previewText: item.previewText,
   };
-}
-
-function getArtifactId(artifact: { id?: string }, fallbackId: string): string {
-  return artifact.id ?? fallbackId;
 }
 
 export function extractArtifactsFromMessages(
@@ -67,22 +41,7 @@ export function extractArtifactsFromMessages(
   updatedAt: string,
   messages: AgentMessage[]
 ): SavedArtifactSummary[] {
-  const store = new WorkspaceStore();
-  store.reconstructFromMessages(messages);
-
-  return store
-    .getSnapshot()
-    .filter(([, artifact]) => isArtifactPath(artifact.filename))
-    .map(([, artifact]) =>
-      toSavedArtifactSummary(
-        getArtifactId(artifact, `main:${artifact.filename}`),
-        sessionId,
-        sessionTitle,
-        updatedAt,
-        artifact.filename,
-        artifact.content
-      )
-    );
+  return extractItemsByKind("artifact", sessionId, sessionTitle, updatedAt, messages).map(toSummary);
 }
 
 export function extractArtifactsFromSubtaskRuns(
@@ -91,20 +50,5 @@ export function extractArtifactsFromSubtaskRuns(
   updatedAt: string,
   runs: Record<string, SubtaskRun> | null | undefined
 ): SavedArtifactSummary[] {
-  if (!runs) return [];
-
-  return Object.entries(runs).flatMap(([runKey, run]) =>
-    run.files
-      .filter((artifact) => isArtifactPath(artifact.filename))
-      .map((artifact, index) =>
-        toSavedArtifactSummary(
-          getArtifactId(artifact, `subtask:${runKey}:${index}:${artifact.filename}`),
-          sessionId,
-          sessionTitle,
-          updatedAt,
-          artifact.filename,
-          artifact.content
-        )
-      )
-  );
+  return extractItemsByKindFromSubtaskRuns("artifact", sessionId, sessionTitle, updatedAt, runs).map(toSummary);
 }

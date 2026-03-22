@@ -1,13 +1,12 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { ToolCall } from "@mariozechner/pi-ai";
 import {
-  ARTIFACTS_DIR,
-  WIDGETS_DIR,
   getDisplayPath,
   getParentPath,
   getWorkspacePathValidationError,
   normalizeWorkspacePath,
 } from "../workspace-types";
+import { getExtensionRegistry } from "../../extensions/registry";
 import { computeEdit } from "./file-tool-utils";
 import type { WorkspaceFile, WorkspaceFileMessage, WorkspaceParams } from "./types";
 import type { SeedWorkspaceFile } from "../guidelines";
@@ -148,7 +147,7 @@ export class WorkspaceStore {
   }
 
   private resetDirectories(): void {
-    this._directories = new Set([ARTIFACTS_DIR, WIDGETS_DIR]);
+    this._directories = new Set(getExtensionRegistry().getDefaultDirectories());
   }
 
   private ensureDirectory(path: string): void {

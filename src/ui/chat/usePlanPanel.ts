@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { WorkspaceFile } from "../../ai/workspace/types";
-import { isPlanPath, normalizeWorkspacePath } from "../../ai/workspace-types";
+import { resolveWorkspaceKind } from "../../extensions";
+import { normalizeWorkspacePath } from "../../ai/workspace-types";
 
 export interface PlanStep {
   description: string;
@@ -41,7 +42,7 @@ export function usePlanPanel(
 ) {
   const planData = useMemo<PlanData | null>(() => {
     const planFile = workspaceFiles
-      .filter((f) => isPlanPath(f.filename) && f.filename.endsWith(".jsonl"))
+      .filter((f) => resolveWorkspaceKind(f.filename) === "plan" && f.filename.endsWith(".jsonl"))
       .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())[0];
 
     if (!planFile) return null;

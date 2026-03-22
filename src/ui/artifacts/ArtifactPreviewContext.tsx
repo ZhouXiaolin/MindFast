@@ -2,11 +2,8 @@ import { createContext, useContext, useMemo } from "react";
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type { AssistantMessage, ToolCall, ToolResultMessage } from "@mariozechner/pi-ai";
 import type { WorkspaceFile } from "../../ai/workspace/types";
-import {
-  isArtifactPath,
-  isWidgetPath,
-  normalizeWorkspacePath,
-} from "../../ai/workspace-types";
+import { resolveWorkspaceKind } from "../../extensions";
+import { normalizeWorkspacePath } from "../../ai/workspace-types";
 import { getFileType, type ArtifactFileType } from "./types";
 
 type ArtifactPreviewOperation = "write" | "edit";
@@ -54,7 +51,9 @@ const TEXT_STREAMABLE_FILE_TYPES = new Set<ArtifactFileType>([
 ]);
 
 function isPreviewPath(path?: string): path is string {
-  return !!path && (isArtifactPath(path) || isWidgetPath(path));
+  if (!path) return false;
+  const kind = resolveWorkspaceKind(path);
+  return kind === "artifact" || kind === "widget";
 }
 
 function isTextStreamableFileType(fileType: ArtifactFileType): boolean {
@@ -66,7 +65,8 @@ function getStatusText(
   path: string,
   fileType: ArtifactFileType
 ): string {
-  const targetLabel = isWidgetPath(path) ? "widget" : "artifact";
+  const kind = resolveWorkspaceKind(path);
+  const targetLabel = kind === "widget" ? "widget" : "artifact";
   if (isTextStreamableFileType(fileType)) {
     return operation === "edit" ? `Updating ${targetLabel}...` : `Writing ${targetLabel}...`;
   }
